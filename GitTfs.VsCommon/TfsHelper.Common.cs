@@ -6,20 +6,20 @@ using System.Linq;
 using System.Net;
 using System.Reflection;
 using Microsoft.TeamFoundation;
+using Microsoft.TeamFoundation.Build.Client;
 using Microsoft.TeamFoundation.Client;
 using Microsoft.TeamFoundation.VersionControl.Client;
 using Microsoft.TeamFoundation.WorkItemTracking.Client;
 using Microsoft.Win32;
-using SEP.Extensions;
 using Sep.Git.Tfs.Commands;
 using Sep.Git.Tfs.Core;
 using Sep.Git.Tfs.Core.TfsInterop;
 using Sep.Git.Tfs.Util;
+using SEP.Extensions;
 using StructureMap;
 using StructureMap.Attributes;
 using ChangeType = Microsoft.TeamFoundation.VersionControl.Client.ChangeType;
 using IdentityNotFoundException = Microsoft.TeamFoundation.VersionControl.Client.IdentityNotFoundException;
-using Microsoft.TeamFoundation.Build.Client;
 
 namespace Sep.Git.Tfs.VsCommon
 {
@@ -42,7 +42,7 @@ namespace Sep.Git.Tfs.VsCommon
                 _resolverInstalled = true;
             }
         }
-        
+
         [SetterProperty]
         public Janitor Janitor { get; set; }
 
@@ -137,16 +137,16 @@ namespace Sep.Git.Tfs.VsCommon
 
         private void NonFatalError(object sender, ExceptionEventArgs e)
         {
-           if (e.Failure != null)
-           {
-              _stdout.WriteLine(e.Failure.Message);
-              Trace.WriteLine("Failure: " + e.Failure.Inspect(), "tfs non-fatal error");
-           }
-           if (e.Exception != null)
-           {
-              _stdout.WriteLine(e.Exception.Message);
-              Trace.WriteLine("Exception: " + e.Exception.Inspect(), "tfs non-fatal error");
-           }
+            if (e.Failure != null)
+            {
+                _stdout.WriteLine(e.Failure.Message);
+                Trace.WriteLine("Failure: " + e.Failure.Inspect(), "tfs non-fatal error");
+            }
+            if (e.Exception != null)
+            {
+                _stdout.WriteLine(e.Exception.Message);
+                Trace.WriteLine("Exception: " + e.Exception.Inspect(), "tfs non-fatal error");
+            }
         }
 
         private void Getting(object sender, GettingEventArgs e)
@@ -183,9 +183,38 @@ namespace Sep.Git.Tfs.VsCommon
             do
             {
                 var startChangeset = new ChangesetVersionSpec(start);
-                changesets = Retry.Do(() => VersionControl.QueryHistory(path, lastChangeset, 0, RecursionType.Full,
-                    null, startChangeset, lastChangeset, BatchCount, true, true, true, true)
-                    .Cast<Changeset>().ToArray());
+                changesets = Retry.Do(() =>
+                {
+                    var tries = 0;
+                    Changeset[] result = null;
+                    while (true)
+                    {
+                        try
+                        {
+                            result = VersionControl.QueryHistory(path, lastChangeset, 0, RecursionType.Full, null,
+                                    startChangeset, lastChangeset, BatchCount, true, true, true, true)
+                                .Cast<Changeset>()
+                                .ToArray();
+                            break;
+                        }
+                        catch (Exception)
+                        {
+                            if (tries == 0)
+                            {
+                                GitTfs.SendNotification("First Retry in GetChangesets()");
+                            }
+                            if (++tries > 120)
+                            {
+                                throw;
+                            }
+                            Trace.WriteLine(string.Format("GetChangesets() waiting to retry [{0}]", tries));
+                            System.Threading.Thread.Sleep(TimeSpan.FromSeconds(60));
+                        }
+
+                    }
+                    return result;
+                });
+                
                 if (changesets.Length > 0)
                     start = changesets[changesets.Length - 1].ChangesetId + 1;
 
@@ -218,8 +247,35 @@ namespace Sep.Git.Tfs.VsCommon
         {
             var targetVersion = new ChangesetVersionSpec(targetChangeset);
             var searchTo = targetVersion;
-            var mergeInfo = VersionControl.QueryMerges(null, null, path, targetVersion, null, searchTo, RecursionType.Full);
-            if (mergeInfo.Length == 0) return -1;
+
+            ChangesetMerge[] mergeInfo;
+            var tries = 0;
+            do
+            {
+                try
+                {
+                    mergeInfo = VersionControl.QueryMerges(null, null, path, targetVersion, null, searchTo, RecursionType.Full);
+                    if (mergeInfo.Length == 0)
+                    {
+                        return -1;
+                    }
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (tries == 0)
+                    {
+                        GitTfs.SendNotification("First Retry in FindMergChangesetParent()");
+                    }
+                    if (++tries > 120)
+                    {
+                        throw;
+                    }
+                    Trace.WriteLine(string.Format("FindMergeChangesetParent() waiting to retry [{0}]", tries));
+                    System.Threading.Thread.Sleep(TimeSpan.FromSeconds(60));
+                }
+            } while (true);
+
             return mergeInfo.Max(x => x.SourceVersion);
         }
 
@@ -561,12 +617,12 @@ namespace Sep.Git.Tfs.VsCommon
             if (HasWorkItems(changeset))
             {
                 tfsChangeset.Summary.Workitems = changeset.WorkItems.Select(wi => new TfsWorkitem
-                    {
-                        Id = wi.Id,
-                        Title = wi.Title,
-                        Description = wi.Description,
-                        Url = Linking.GetArtifactUrl(wi.Uri.AbsoluteUri)
-                    });
+                {
+                    Id = wi.Id,
+                    Title = wi.Title,
+                    Description = wi.Description,
+                    Url = Linking.GetArtifactUrl(wi.Uri.AbsoluteUri)
+                });
             }
             foreach (var checkinNote in changeset.CheckinNote.Values)
             {
@@ -584,7 +640,7 @@ namespace Sep.Git.Tfs.VsCommon
                 }
             }
             tfsChangeset.Summary.PolicyOverrideComment = changeset.PolicyOverride.Comment;
-            
+
             return tfsChangeset;
         }
 
@@ -731,7 +787,7 @@ namespace Sep.Git.Tfs.VsCommon
         {
             return Path.Combine(GetVsInstallDir(), "PrivateAssemblies", DialogAssemblyName + ".dll");
         }
-        
+
         public void CleanupWorkspaces(string workingDirectory)
         {
             // workingDirectory is the path to a TFS workspace managed by git-tfs.
@@ -812,7 +868,7 @@ namespace Sep.Git.Tfs.VsCommon
             var shelveset = shelvesets.First();
 
             var itemSpec = new ItemSpec(remote.TfsRepositoryPath, RecursionType.Full);
-            var change = VersionControl.QueryShelvedChanges(shelveset, new ItemSpec[] {itemSpec}).SingleOrDefault();
+            var change = VersionControl.QueryShelvedChanges(shelveset, new ItemSpec[] { itemSpec }).SingleOrDefault();
             if (change == null)
             {
                 throw new GitTfsException("There is no changes in this shelveset that apply to the current tfs remote.")
@@ -1170,13 +1226,13 @@ namespace Sep.Git.Tfs.VsCommon
                     throw new GitTfsException("error: data for the label '" + labelDefinition.Name + "' can't be loaded!");
                 }
                 var tfsLabel = new TfsLabel
-                    {
-                        Id = label.LabelId,
-                        Name = label.Name,
-                        Comment = label.Comment,
-                        Owner = label.OwnerName,
-                        Date = label.LastModifiedDate,
-                    };
+                {
+                    Id = label.LabelId,
+                    Name = label.Name,
+                    Comment = label.Comment,
+                    Owner = label.OwnerName,
+                    Date = label.LastModifiedDate,
+                };
                 foreach (var item in label.Items)
                 {
                     if (item.ServerItem.StartsWith(tfsPathBranch))
@@ -1368,10 +1424,10 @@ namespace Sep.Git.Tfs.VsCommon
         public int QueueGatedCheckinBuild(Uri buildDefinitionUri, string buildDefinitionName, string shelvesetName, string checkInTicket)
         {
             var buildServer = (IBuildServer)_server.GetService(typeof(IBuildServer));
- 
+
             var buildRequest = buildServer.CreateBuildRequest(buildDefinitionUri);
             buildRequest.ShelvesetName = shelvesetName;
-            buildRequest.Reason = BuildReason.CheckInShelveset; 
+            buildRequest.Reason = BuildReason.CheckInShelveset;
             buildRequest.GatedCheckInTicket = checkInTicket;
 
             _stdout.WriteLine("Launching build '" + buildDefinitionName + "' to validate your shelveset...");

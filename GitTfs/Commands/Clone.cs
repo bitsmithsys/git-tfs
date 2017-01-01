@@ -50,6 +50,7 @@ namespace Sep.Git.Tfs.Commands
 
         public int Run(string tfsUrl, string tfsRepositoryPath, string gitRepositoryPath)
         {
+            GitTfs.SendNotification("Clone Command Starting");
             var currentDir = Environment.CurrentDirectory;
             var repositoryDirCreated = InitGitDir(gitRepositoryPath);
 
@@ -153,6 +154,7 @@ namespace Sep.Git.Tfs.Commands
                         throw;
                 }
             }
+            GitTfs.SendNotification("Clone Command Complete");
             return retVal;
         }
 

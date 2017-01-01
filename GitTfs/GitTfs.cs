@@ -24,6 +24,26 @@ namespace Sep.Git.Tfs
         private TextWriter _stdout;
         private Bootstrapper _bootstrapper;
 
+        public static void SendNotification(string message)
+        {
+            Trace.WriteLine(string.Format("Sending Notification [{0}]", message));
+            // Start the child process.
+            Process p = new Process();
+            // Redirect the output stream of the child process.
+            p.StartInfo.UseShellExecute = false;
+            p.StartInfo.RedirectStandardOutput = true;
+            p.StartInfo.FileName = "Texter";
+            p.StartInfo.Arguments = string.Format("\"{0}\"", message);
+            p.Start();
+            // Do not wait for the child process to exit before
+            // reading to the end of its redirected stream.
+            // p.WaitForExit();
+            // Read the output stream first and then wait.
+            string output = p.StandardOutput.ReadToEnd();
+            p.WaitForExit();
+            Trace.WriteLine(string.Format("Notification Sent\r\n{0}", output));
+        }
+
         public GitTfs(ITfsHelper tfsHelper, GitTfsCommandFactory commandFactory, IHelpHelper help, IContainer container,
             IGitTfsVersionProvider gitTfsVersionProvider, GitTfsCommandRunner runner, Globals globals, TextWriter stdout, Bootstrapper bootstrapper)
         {
