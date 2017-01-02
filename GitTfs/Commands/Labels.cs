@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -6,8 +7,8 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using NDesk.Options;
 using Sep.Git.Tfs.Core;
-using StructureMap;
 using Sep.Git.Tfs.Util;
+using StructureMap;
 
 namespace Sep.Git.Tfs.Commands
 {
@@ -88,8 +89,33 @@ namespace Sep.Git.Tfs.Commands
 
             UpdateRemote(tfsRemote);
             _stdout.WriteLine("Looking for label on " + tfsRemote.TfsRepositoryPath + "...");
-            var labels = tfsRemote.Tfs.GetLabels(tfsRemote.TfsRepositoryPath, NameFilter);
-            _stdout.WriteLine(labels.Count() +" labels found!");
+            IEnumerable<TfsLabel> labels = null;
+
+            var tries = 0;
+            while (true)
+            {
+                try
+                {
+                    labels = tfsRemote.Tfs.GetLabels(tfsRemote.TfsRepositoryPath, NameFilter);
+                    break;
+                }
+                catch (Exception)
+                {
+                    if (tries == 0)
+                    {
+                        GitTfs.SendNotification("First Retry in GetChangesets()");
+                    }
+                    if (++tries > 120)
+                    {
+                        throw;
+                    }
+                    Trace.WriteLine(string.Format("CreateLabelsForTfsBranch() waiting to retry [{0}]", tries));
+                    System.Threading.Thread.Sleep(TimeSpan.FromSeconds(60));
+                }
+
+            }
+
+            _stdout.WriteLine(labels.Count() + " labels found!");
 
             Regex exludeRegex = null;
             if (ExcludeNameFilter != null)
@@ -112,7 +138,7 @@ namespace Sep.Git.Tfs.Commands
 
                 string ownerName;
                 string ownerEmail;
-                if(_authors.Authors.ContainsKey(label.Owner))
+                if (_authors.Authors.ContainsKey(label.Owner))
                 {
                     var author = _authors.Authors[label.Owner];
                     ownerName = author.Name;
@@ -125,7 +151,7 @@ namespace Sep.Git.Tfs.Commands
                 }
                 var labelName = (label.IsTransBranch ? label.Name + "(" + tfsRemote.Id + ")" : label.Name).ToGitRefName();
                 _stdout.WriteLine("Writing label '" + labelName + "'...");
-                _globals.Repository.CreateTag(labelName, sha1TagCommit, label.Comment, ownerName, ownerEmail ,label.Date);
+                _globals.Repository.CreateTag(labelName, sha1TagCommit, label.Comment, ownerName, ownerEmail, label.Date);
             }
             return GitTfsExitCodes.OK;
         }
