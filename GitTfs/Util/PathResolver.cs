@@ -7,9 +7,9 @@ namespace Sep.Git.Tfs.Util
 {
     public class PathResolver
     {
-        readonly IGitTfsRemote _remote;
-        readonly string _relativePath;
-        readonly IDictionary<string, GitObject> _initialTree;
+        private readonly IGitTfsRemote _remote;
+        private readonly string _relativePath;
+        private readonly IDictionary<string, GitObject> _initialTree;
 
         public PathResolver(IGitTfsRemote remote, string relativePath, IDictionary<string, GitObject> initialTree)
         {
@@ -35,7 +35,7 @@ namespace Sep.Git.Tfs.Util
 
         public bool ShouldIncludeGitItem(string gitPath)
         {
-            return !String.IsNullOrEmpty(gitPath) && !_remote.ShouldSkip(gitPath);
+            return !string.IsNullOrEmpty(gitPath) && !_remote.ShouldSkip(gitPath);
         }
 
         public bool Contains(string pathInGitRepo)

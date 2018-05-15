@@ -1,4 +1,3 @@
-using System;
 using Sep.Git.Tfs.Util;
 
 namespace Sep.Git.Tfs
@@ -7,7 +6,7 @@ namespace Sep.Git.Tfs
     // or overridden by some other means, like from the command line.
     public class ConfigProperties
     {
-        ConfigPropertyLoader _loader;
+        private readonly ConfigPropertyLoader _loader;
 
         public ConfigProperties(ConfigPropertyLoader loader)
         {
@@ -18,7 +17,7 @@ namespace Sep.Git.Tfs
         {
             _loader.PersistAllOverrides();
         }
-        
+
         public int BatchSize
         {
             set { _loader.Override(GitTfsConstants.BatchSize, value); }
@@ -33,10 +32,9 @@ namespace Sep.Git.Tfs
             }
             get
             {
-                int? initialChangeset = _loader.Get<int>(GitTfsConstants.InitialChangeset, -1);
+                int? initialChangeset = _loader.Get(GitTfsConstants.InitialChangeset, -1);
                 return initialChangeset == -1 ? null : initialChangeset;
             }
         }
-
     }
 }

@@ -9,18 +9,16 @@ namespace Sep.Git.Tfs.Core
 {
     public class GitHelpers : IGitHelpers
     {
-        protected readonly TextWriter realStdout;
         private readonly IContainer _container;
 
         /// <summary>
         /// Starting with version 1.7.10, Git uses UTF-8.
         /// Use this encoding for Git input and output.
         /// </summary>
-        private static Encoding _encoding = new UTF8Encoding(false, true);
+        private static readonly Encoding _encoding = new UTF8Encoding(false, true);
 
-        public GitHelpers(TextWriter stdout, IContainer container)
+        public GitHelpers(IContainer container)
         {
-            realStdout = stdout;
             _container = container;
         }
 
@@ -49,7 +47,7 @@ namespace Sep.Git.Tfs.Core
         /// </summary>
         public void CommandNoisy(params string[] command)
         {
-            CommandOutputPipe(stdout => realStdout.Write(stdout.ReadToEnd()), command);
+            CommandOutputPipe(stdout => Trace.TraceInformation(stdout.ReadToEnd()), command);
         }
 
         /// <summary>
@@ -76,30 +74,30 @@ namespace Sep.Git.Tfs.Core
             return new ProcessStdoutReader(this, process);
         }
 
-        class ProcessStdoutReader : TextReader
+        private class ProcessStdoutReader : TextReader
         {
-            private readonly GitProcess process;
-            private readonly GitHelpers helper;
+            private readonly GitProcess _process;
+            private readonly GitHelpers _helper;
 
             public ProcessStdoutReader(GitHelpers helper, GitProcess process)
             {
-                this.helper = helper;
-                this.process = process;
+                _helper = helper;
+                _process = process;
             }
 
             public override void Close()
             {
-                helper.Close(process);
+                _helper.Close(_process);
             }
 
             public override System.Runtime.Remoting.ObjRef CreateObjRef(Type requestedType)
             {
-                return process.StandardOutput.CreateObjRef(requestedType);
+                return _process.StandardOutput.CreateObjRef(requestedType);
             }
 
             protected override void Dispose(bool disposing)
             {
-                if(disposing && process != null)
+                if (disposing && _process != null)
                 {
                     Close();
                 }
@@ -108,52 +106,52 @@ namespace Sep.Git.Tfs.Core
 
             public override bool Equals(object obj)
             {
-                return process.StandardOutput.Equals(obj);
+                return _process.StandardOutput.Equals(obj);
             }
 
             public override int GetHashCode()
             {
-                return process.StandardOutput.GetHashCode();
+                return _process.StandardOutput.GetHashCode();
             }
 
             public override object InitializeLifetimeService()
             {
-                return process.StandardOutput.InitializeLifetimeService();
+                return _process.StandardOutput.InitializeLifetimeService();
             }
 
             public override int Peek()
             {
-                return process.StandardOutput.Peek();
+                return _process.StandardOutput.Peek();
             }
 
             public override int Read()
             {
-                return process.StandardOutput.Read();
+                return _process.StandardOutput.Read();
             }
 
             public override int Read(char[] buffer, int index, int count)
             {
-                return process.StandardOutput.Read(buffer, index, count);
+                return _process.StandardOutput.Read(buffer, index, count);
             }
 
             public override int ReadBlock(char[] buffer, int index, int count)
             {
-                return process.StandardOutput.ReadBlock(buffer, index, count);
+                return _process.StandardOutput.ReadBlock(buffer, index, count);
             }
 
             public override string ReadLine()
             {
-                return process.StandardOutput.ReadLine();
+                return _process.StandardOutput.ReadLine();
             }
 
             public override string ReadToEnd()
             {
-                return process.StandardOutput.ReadToEnd();
+                return _process.StandardOutput.ReadToEnd();
             }
 
             public override string ToString()
             {
-                return process.StandardOutput.ToString();
+                return _process.StandardOutput.ToString();
             }
         }
 
@@ -189,7 +187,7 @@ namespace Sep.Git.Tfs.Core
             finally
             {
                 var end = DateTime.Now;
-                Trace.WriteLine(String.Format("[{0}] {1}", end - start, String.Join(" ", command)), "git command time");
+                Trace.WriteLine(string.Format("[{0}] {1}", end - start, string.Join(" ", command)), "git command time");
             }
         }
 
@@ -207,7 +205,7 @@ namespace Sep.Git.Tfs.Core
 
             if (!process.WaitForExit((int)TimeSpan.FromSeconds(10).TotalMilliseconds))
                 throw new GitCommandException("Command did not terminate.", process);
-            if(process.ExitCode != 0)
+            if (process.ExitCode != 0)
                 throw new GitCommandException(string.Format("Command exited with error code: {0}\n{1}", process.ExitCode, process.StandardErrorString), process);
         }
 
@@ -219,8 +217,8 @@ namespace Sep.Git.Tfs.Core
 
         private void RedirectStderr(ProcessStartInfo startInfo)
         {
-           startInfo.RedirectStandardError= true;
-           startInfo.StandardErrorEncoding = _encoding;
+            startInfo.RedirectStandardError = true;
+            startInfo.StandardErrorEncoding = _encoding;
         }
 
         private void RedirectStdin(ProcessStartInfo startInfo)
@@ -231,10 +229,10 @@ namespace Sep.Git.Tfs.Core
 
         private GitProcess Start(string[] command)
         {
-            return Start(command, x => {});
+            return Start(command, x => { });
         }
 
-        protected virtual GitProcess Start(string [] command, Action<ProcessStartInfo> initialize)
+        protected virtual GitProcess Start(string[] command, Action<ProcessStartInfo> initialize)
         {
             var startInfo = new ProcessStartInfo();
             startInfo.FileName = "git";
@@ -263,7 +261,7 @@ namespace Sep.Git.Tfs.Core
             }
             catch (GitCommandException e)
             {
-                throw new Exception(String.Format(exceptionMessage, e.Process.StartInfo.FileName + " " + e.Process.StartInfo.Arguments, e.Process.ExitCode), e);
+                throw new Exception(string.Format(exceptionMessage, e.Process.StartInfo.FileName + " " + e.Process.StartInfo.Arguments, e.Process.ExitCode), e);
             }
         }
 
@@ -277,13 +275,13 @@ namespace Sep.Git.Tfs.Core
         private static readonly Regex ValidCommandName = new Regex("^[a-z0-9A-Z_-]+$");
         private static void AssertValidCommand(string[] command)
         {
-            if(command.Length < 1 || !ValidCommandName.IsMatch(command[0]))
+            if (command.Length < 1 || !ValidCommandName.IsMatch(command[0]))
                 throw new Exception("bad git command: " + (command.Length == 0 ? "" : command[0]));
         }
 
         protected class GitProcess
         {
-            Process _process;
+            private readonly Process _process;
 
             public GitProcess(Process process)
             {

@@ -3,12 +3,11 @@ using System.Linq;
 using Sep.Git.Tfs.Core;
 using Sep.Git.Tfs.Core.Changes.Git;
 using StructureMap;
-using LibGit2Sharp;
 using Xunit;
 
 namespace Sep.Git.Tfs.Test.Core
 {
-    public class GitChangeInfoTests
+    public class GitChangeInfoTests : BaseTest
     {
         [Fact]
         public void GetsMode()
@@ -190,7 +189,7 @@ namespace Sep.Git.Tfs.Test.Core
             using (var reader = new System.IO.StringReader(input))
             {
                 var changes = GitChangeInfo.GetChangedFiles(reader).ToArray();
-                
+
                 Assert.Equal(5, changes.Length);
 
                 Assert.Equal("A", changes[0].Status);
@@ -246,6 +245,5 @@ namespace Sep.Git.Tfs.Test.Core
                 Assert.Equal("TestFiles/試し4.txt", changes[4].path);
             }
         }
-
     }
 }

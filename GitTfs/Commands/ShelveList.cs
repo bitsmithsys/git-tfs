@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System.Linq;
+﻿using System.ComponentModel;
 using NDesk.Options;
 using Sep.Git.Tfs.Core;
 using StructureMap;
@@ -14,7 +10,6 @@ namespace Sep.Git.Tfs.Commands
     [RequiresValidGitRepository]
     public class ShelveList : GitTfsCommand
     {
-        private readonly TextWriter _stdout;
         private readonly Globals _globals;
 
         public string SortBy { get; set; }
@@ -37,9 +32,8 @@ namespace Sep.Git.Tfs.Commands
             }
         }
 
-        public ShelveList(TextWriter stdout, Globals globals)
+        public ShelveList(Globals globals)
         {
-            _stdout = stdout;
             _globals = globals;
         }
 

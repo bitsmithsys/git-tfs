@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Rhino.Mocks;
 using Sep.Git.Tfs.Core.TfsInterop;
@@ -7,12 +6,12 @@ using Xunit;
 
 namespace Sep.Git.Tfs.Test.Core.TfsInterop
 {
-    public class BranchExtensionsTest
+    public class BranchExtensionsTest : BaseTest
     {
         [Fact]
         public void AllChildrenAlwaysReturnsAnEnumerable()
         {
-            IEnumerable<BranchTree> result = ((BranchTree) null).GetAllChildren();
+            IEnumerable<BranchTree> result = ((BranchTree)null).GetAllChildren();
 
             Assert.NotNull(result);
             Assert.Empty(result);
@@ -25,7 +24,7 @@ namespace Sep.Git.Tfs.Test.Core.TfsInterop
 
             var branchTree = new BranchTree(branchObject);
 
-            if(parent != null)
+            if (parent != null)
                 parent.ChildBranches.Add(branchTree);
             return branchTree;
         }

@@ -12,16 +12,16 @@ using Xunit.Sdk;
 
 namespace Sep.Git.Tfs.Test.Integration
 {
-    class IntegrationHelper : IDisposable
+    internal class IntegrationHelper : IDisposable
     {
         #region manage the work directory
 
-        string _workdir;
+        private string _workdir;
         private string Workdir
         {
             get
             {
-                if(_workdir == null)
+                if (_workdir == null)
                 {
                     _workdir = Path.GetTempFileName();
                     File.Delete(_workdir);
@@ -52,7 +52,7 @@ namespace Sep.Git.Tfs.Test.Integration
             }
         }
 
-        private Dictionary<string, Repository> _repositories = new Dictionary<string,Repository>();
+        private readonly Dictionary<string, Repository> _repositories = new Dictionary<string, Repository>();
         public Repository Repository(string path)
         {
             path = Path.Combine(Workdir, path);
@@ -78,7 +78,7 @@ namespace Sep.Git.Tfs.Test.Integration
         public void SetupGitRepo(string path, Action<RepoBuilder> buildIt)
         {
             var fullPath = Path.Combine(Workdir, path);
-            System.Diagnostics.Trace.WriteLine("Repository path:" + fullPath);
+            Console.WriteLine("Repository path:" + fullPath);
             var repoPath = LibGit2Sharp.Repository.Init(fullPath);
             using (var repo = new Repository(repoPath))
                 buildIt(new RepoBuilder(repo));
@@ -86,7 +86,7 @@ namespace Sep.Git.Tfs.Test.Integration
 
         public class RepoBuilder
         {
-            private Repository _repo;
+            private readonly Repository _repo;
 
             public RepoBuilder(Repository repo)
             {
@@ -98,12 +98,12 @@ namespace Sep.Git.Tfs.Test.Integration
                 return new Signature("Test User", "test@example.com", new DateTimeOffset(DateTime.Now));
             }
 
-            public string Commit(string message)
+            public string Commit(string message, string filename = "README.txt")
             {
-                File.WriteAllText(Path.Combine(_repo.Info.WorkingDirectory, "README.txt"), message);
-                _repo.Stage("README.txt");
+                File.WriteAllText(Path.Combine(_repo.Info.WorkingDirectory, filename), message);
+                _repo.Stage(filename);
                 var committer = GetCommitter();
-                return _repo.Commit(message, committer, committer, new CommitOptions(){ AllowEmptyCommit = true}).Id.Sha;
+                return _repo.Commit(message, committer, committer, new CommitOptions() { AllowEmptyCommit = true }).Id.Sha;
             }
 
             public void CreateBranch(string branchName)
@@ -125,7 +125,7 @@ namespace Sep.Git.Tfs.Test.Integration
             public string Amend(string message)
             {
                 var committer = GetCommitter();
-                return _repo.Commit(message, committer, committer, new CommitOptions(){ AmendPreviousCommit = true}).Id.Sha;
+                return _repo.Commit(message, committer, committer, new CommitOptions() { AmendPreviousCommit = true }).Id.Sha;
             }
         }
 
@@ -145,7 +145,7 @@ namespace Sep.Git.Tfs.Test.Integration
 
         public class FakeHistoryBuilder
         {
-            Script _script;
+            private readonly Script _script;
             public FakeHistoryBuilder(Script script)
             {
                 _script = script;
@@ -211,13 +211,13 @@ namespace Sep.Git.Tfs.Test.Integration
 
             public void SetRootBranch(string rootBranchPath)
             {
-                _script.RootBranches.Add(new ScriptedRootBranch(){BranchPath = rootBranchPath});
+                _script.RootBranches.Add(new ScriptedRootBranch() { BranchPath = rootBranchPath });
             }
         }
 
         public class FakeChangesetBuilder
         {
-            ScriptedChangeset _changeset;
+            private readonly ScriptedChangeset _changeset;
 
             public FakeChangesetBuilder(ScriptedChangeset changeset)
             {
@@ -267,7 +267,10 @@ namespace Sep.Git.Tfs.Test.Integration
                 Environment.SetEnvironmentVariable(Script.EnvVar, FakeScript);
                 Console.WriteLine(">> git tfs " + QuoteArgs(args));
                 var argsWithDebug = new List<string>();
-                argsWithDebug.Add("--debug");
+                if (BaseTest.DisplayTrace)
+                {
+                    argsWithDebug.Add("--debug");
+                }
                 argsWithDebug.AddRange(args);
                 return Program.MainCore(argsWithDebug.ToArray());
             }
@@ -294,7 +297,7 @@ namespace Sep.Git.Tfs.Test.Integration
 
         public void ChangeConfigSetting(string repodir, string key, string value)
         {
-            var repo = new LibGit2Sharp.Repository(Path.Combine(Workdir, repodir));
+            var repo = new Repository(Path.Combine(Workdir, repodir));
             repo.Config.Set(key, value);
         }
 
@@ -377,7 +380,7 @@ namespace Sep.Git.Tfs.Test.Integration
             Assert.Equal(expectedPaths.OrderBy(s => s), entries.OrderBy(s => s));
         }
 
-        public void AssertCommitMessage(string repodir, string commitish, params string [] expectedMessageLines)
+        public void AssertCommitMessage(string repodir, string commitish, params string[] expectedMessageLines)
         {
             var commit = Repository(repodir).Lookup<Commit>(commitish);
             AssertEqual(expectedMessageLines, Lines(commit.Message), "Commit message of " + commitish);

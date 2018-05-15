@@ -12,16 +12,14 @@ namespace Sep.Git.Tfs.Core
     {
         private readonly ITfsHelper _tfs;
         private readonly IChangeset _changeset;
-        private readonly TextWriter _stdout;
         private readonly AuthorsFile _authors;
         public TfsChangesetInfo Summary { get; set; }
         public int BaseChangesetId { get; set; }
 
-        public TfsChangeset(ITfsHelper tfs, IChangeset changeset, TextWriter stdout, AuthorsFile authors)
+        public TfsChangeset(ITfsHelper tfs, IChangeset changeset, AuthorsFile authors)
         {
             _tfs = tfs;
             _changeset = changeset;
-            _stdout = stdout;
             _authors = authors;
             BaseChangesetId = _changeset.Changes.Max(c => c.Item.ChangesetId) - 1;
         }
@@ -73,7 +71,7 @@ namespace Sep.Git.Tfs.Core
             }
             else
             {
-                _stdout.WriteLine("Cannot checkout file '{0}' from TFS. Skip it", change.GitPath);
+                Trace.TraceInformation("Cannot checkout file '{0}' from TFS. Skip it", change.GitPath);
             }
         }
 
@@ -96,11 +94,11 @@ namespace Sep.Git.Tfs.Core
         {
             var treeInfo = Summary.Remote.Repository.CreateObjectsDictionary();
             var resolver = new PathResolver(Summary.Remote, "", treeInfo);
-            
+
             IItem[] tfsItems;
-            if(Summary.Remote.TfsRepositoryPath != null)
+            if (Summary.Remote.TfsRepositoryPath != null)
             {
-                tfsItems = _changeset.VersionControlServer.GetItems(Summary.Remote.TfsRepositoryPath, _changeset.ChangesetId, TfsRecursionType.Full);   
+                tfsItems = _changeset.VersionControlServer.GetItems(Summary.Remote.TfsRepositoryPath, _changeset.ChangesetId, TfsRecursionType.Full);
             }
             else
             {
@@ -131,7 +129,7 @@ namespace Sep.Git.Tfs.Core
                     itemsCopied++;
                     if (DateTime.Now - startTime > TimeSpan.FromSeconds(30))
                     {
-                        _stdout.WriteLine("{0} objects created...", itemsCopied);
+                        Trace.TraceInformation("{0} objects created...", itemsCopied);
                         startTime = DateTime.Now;
                     }
                 }
@@ -178,7 +176,7 @@ namespace Sep.Git.Tfs.Core
             }
             catch
             {
-            } 
+            }
             var name = changesetToLog.Committer;
             var email = changesetToLog.Committer;
             if (_authors != null && _authors.Authors.ContainsKey(changesetToLog.Committer))
@@ -191,13 +189,13 @@ namespace Sep.Git.Tfs.Core
                 //This can be null if the user was deleted from AD.
                 //We want to keep their original history around with as little 
                 //hassle to the end user as possible
-                if (!String.IsNullOrWhiteSpace(identity.DisplayName))
+                if (!string.IsNullOrWhiteSpace(identity.DisplayName))
                     name = identity.DisplayName;
 
-                if (!String.IsNullOrWhiteSpace(identity.MailAddress))
+                if (!string.IsNullOrWhiteSpace(identity.MailAddress))
                     email = identity.MailAddress;
             }
-            else if (!String.IsNullOrWhiteSpace(changesetToLog.Committer))
+            else if (!string.IsNullOrWhiteSpace(changesetToLog.Committer))
             {
                 string[] split = changesetToLog.Committer.Split('\\');
                 if (split.Length == 2)
@@ -210,25 +208,25 @@ namespace Sep.Git.Tfs.Core
             // committer's & author's name and email MUST NOT be empty as otherwise they would be picked
             // by git from user.name and user.email config settings which is bad thing because commit could
             // be different depending on whose machine it fetched
-            if (String.IsNullOrWhiteSpace(name))
+            if (string.IsNullOrWhiteSpace(name))
             {
                 name = "Unknown TFS user";
             }
-            if (String.IsNullOrWhiteSpace(email))
+            if (string.IsNullOrWhiteSpace(email))
             {
                 email = "unknown@tfs.local";
             }
             return new LogEntry
-                       {
-                           Date = changesetToLog.CreationDate,
-                           Log = changesetToLog.Comment + Environment.NewLine,
-                           ChangesetId = changesetToLog.ChangesetId,
-                           CommitterName = name,
-                           AuthorName = name,
-                           CommitterEmail = email,
-                           AuthorEmail = email,
-                           Remote = remote
-                       };
+            {
+                Date = changesetToLog.CreationDate,
+                Log = changesetToLog.Comment + Environment.NewLine,
+                ChangesetId = changesetToLog.ChangesetId,
+                CommitterName = name,
+                AuthorName = name,
+                CommitterEmail = email,
+                AuthorEmail = email,
+                Remote = remote
+            };
         }
 
         public string OmittedParentBranch { get; set; }

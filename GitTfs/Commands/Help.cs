@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -7,9 +6,9 @@ using NDesk.Options;
 using Sep.Git.Tfs.Core;
 using Sep.Git.Tfs.Util;
 using StructureMap;
-using StructureMap.Pipeline;
 using StructureMap.Query;
 using IContainer = StructureMap.IContainer;
+using System.Diagnostics;
 
 namespace Sep.Git.Tfs.Commands
 {
@@ -17,14 +16,12 @@ namespace Sep.Git.Tfs.Commands
     [Description("help [command-name]")]
     public class Help : GitTfsCommand
     {
-        private readonly TextWriter output;
-        private readonly GitTfsCommandFactory commandFactory;
+        private readonly GitTfsCommandFactory _commandFactory;
         private readonly IContainer _container;
 
-        public Help(TextWriter output, GitTfsCommandFactory commandFactory, IContainer container)
+        public Help(GitTfsCommandFactory commandFactory, IContainer container)
         {
-            this.output = output;
-            this.commandFactory = commandFactory;
+            _commandFactory = commandFactory;
             _container = container;
         }
 
@@ -39,16 +36,16 @@ namespace Sep.Git.Tfs.Commands
         /// </summary>
         public int Run(IList<string> args)
         {
-            foreach(var arg in args)
+            foreach (var arg in args)
             {
-                var command = commandFactory.GetCommand(arg);
-                if(command != null)
+                var command = _commandFactory.GetCommand(arg);
+                if (command != null)
                 {
                     return Run(command);
                 }
                 else
                 {
-                    output.WriteLine("Invalid argument: " + arg);
+                    Trace.TraceInformation("Invalid argument: " + arg);
                 }
             }
             return Run();
@@ -59,22 +56,19 @@ namespace Sep.Git.Tfs.Commands
         /// </summary>
         public int Run()
         {
-            output.WriteLine("Usage: git-tfs [command] [options]");
-            foreach(var pair in GetCommandMap())
+            Trace.TraceInformation("Usage: git-tfs [command] [options]");
+            foreach (var pair in GetCommandMap())
             {
-                output.Write("    " + pair.Key);
-                
+                var command = "    " + pair.Key;
+
                 if (pair.Value.Any())
                 {
-                    output.WriteLine(" (" + string.Join(", ", pair.Value) + ")");
+                    command += " (" + string.Join(", ", pair.Value) + ")";
                 }
-                else
-                {
-                    output.WriteLine();
-                }
+                Trace.TraceInformation(command);
             }
-            output.WriteLine(" (use 'git-tfs help [command]' or 'git-tfs [command] --help' for more information)");
-            output.WriteLine("\nFind more help in our online help : https://github.com/git-tfs/git-tfs");
+            Trace.TraceInformation(" (use 'git-tfs help [command]' or 'git-tfs [command] --help' for more information)");
+            Trace.TraceInformation("\nFind more help in our online help : https://github.com/git-tfs/git-tfs");
             return GitTfsExitCodes.Help;
         }
 
@@ -86,10 +80,12 @@ namespace Sep.Git.Tfs.Commands
             if (command is Help)
                 return Run();
 
-            output.WriteLine("Usage: git-tfs " + GetCommandUsage(command));
-            command.GetAllOptions(_container).WriteOptionDescriptions(output);
+            Trace.TraceInformation("Usage: git-tfs " + GetCommandUsage(command));
+            var writer = new StringWriter();
+            command.GetAllOptions(_container).WriteOptionDescriptions(writer);
+            Trace.TraceInformation(writer.ToString());
 
-            output.WriteLine("\nFind more help in our online help : https://github.com/git-tfs/git-tfs/blob/master/doc/commands/" + GetCommandName(command)+".md");
+            Trace.TraceInformation("\nFind more help in our online help : https://github.com/git-tfs/git-tfs/blob/master/doc/commands/" + GetCommandName(command) + ".md");
 
             return GitTfsExitCodes.Help;
         }
@@ -100,7 +96,7 @@ namespace Sep.Git.Tfs.Commands
                     where instance.Name != null
                     orderby instance.Name
                     select instance.Name)
-                .ToDictionary(s => s, s => commandFactory.GetAliasesForCommandName(s));
+                .ToDictionary(s => s, s => _commandFactory.GetAliasesForCommandName(s));
         }
 
         private string GetCommandName(GitTfsCommand command)
@@ -114,7 +110,7 @@ namespace Sep.Git.Tfs.Commands
         {
             return _container.Model
                 .PluginTypes
-                .Single(p => p.PluginType == typeof (GitTfsCommand))
+                .Single(p => p.PluginType == typeof(GitTfsCommand))
                 .Instances
                 .Where(i => i != null);
         }
@@ -122,7 +118,7 @@ namespace Sep.Git.Tfs.Commands
         private string GetCommandUsage(GitTfsCommand command)
         {
             var descriptionAttribute =
-                command.GetType().GetCustomAttributes(typeof (DescriptionAttribute), false).FirstOrDefault() as
+                command.GetType().GetCustomAttributes(typeof(DescriptionAttribute), false).FirstOrDefault() as
                 DescriptionAttribute;
             var commandName = GetCommandName(command);
             return (descriptionAttribute != null)

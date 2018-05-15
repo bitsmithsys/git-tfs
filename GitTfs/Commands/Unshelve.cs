@@ -1,8 +1,6 @@
-﻿using System;
+using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using NDesk.Options;
 using StructureMap;
 using Sep.Git.Tfs.Core;
@@ -15,12 +13,10 @@ namespace Sep.Git.Tfs.Commands
     public class Unshelve : GitTfsCommand
     {
         private readonly Globals _globals;
-        private readonly TextWriter _stdout;
 
-        public Unshelve(Globals globals, TextWriter stdout)
+        public Unshelve(Globals globals)
         {
             _globals = globals;
-            _stdout = stdout;
             TfsBranch = null;
         }
 
@@ -36,7 +32,7 @@ namespace Sep.Git.Tfs.Commands
                 {
                     { "u|user=", "Shelveset owner (default: current user)\nUse 'all' to search all shelvesets.",
                         v => Owner = v },
-                    { "b|branch=", "Git Branch to apply Shelveset to? (default: TFS current remote)", 
+                    { "b|branch=", "Git Branch to apply Shelveset to? (default: TFS current remote)",
                         v => TfsBranch = v },
                     { "force", "Get as much of the Shelveset as possible, and log any other errors",
                         v => Force = v != null },
@@ -51,7 +47,7 @@ namespace Sep.Git.Tfs.Commands
 
             var remote = _globals.Repository.ReadTfsRemote(TfsBranch);
             remote.Unshelve(Owner, shelvesetName, destinationBranch, BuildErrorHandler(), Force);
-            _stdout.WriteLine("Created branch " + destinationBranch + " from shelveset \"" + shelvesetName + "\".");
+            Trace.TraceInformation("Created branch " + destinationBranch + " from shelveset \"" + shelvesetName + "\".");
             return GitTfsExitCodes.OK;
         }
 
@@ -61,7 +57,7 @@ namespace Sep.Git.Tfs.Commands
             {
                 return (e) =>
                 {
-                    _stdout.WriteLine("WARNING: unshelve: " + e.Message);
+                    Trace.TraceWarning("WARNING: unshelve: " + e.Message);
                     Trace.WriteLine(e);
                 };
             }

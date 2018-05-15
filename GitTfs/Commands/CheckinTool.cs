@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.IO;
 using Sep.Git.Tfs.Core;
 using Sep.Git.Tfs.Util;
 
@@ -10,7 +9,7 @@ namespace Sep.Git.Tfs.Commands
     [RequiresValidGitRepository]
     public class CheckinTool : CheckinBase
     {
-        public CheckinTool(TextWriter stdout, CheckinOptions checkinOptions, TfsWriter writer) : base(stdout, checkinOptions, writer)
+        public CheckinTool(CheckinOptions checkinOptions, TfsWriter writer) : base(checkinOptions, writer)
         {
         }
 
@@ -19,7 +18,7 @@ namespace Sep.Git.Tfs.Commands
             if (!changeset.Remote.Tfs.CanShowCheckinDialog)
                 throw new GitTfsException(
                     "checkintool does not work with this TFS version (" + changeset.Remote.Tfs.TfsClientLibraryVersion + ").",
-                    new[] {"Try installing the VS2010 edition of Team Explorer."});
+                    new[] { "Try installing the VS2010 edition of Team Explorer." });
 
             return changeset.Remote.CheckinTool(refToCheckin, changeset);
         }

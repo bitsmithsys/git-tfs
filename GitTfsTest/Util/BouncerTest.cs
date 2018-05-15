@@ -1,12 +1,11 @@
-﻿using System;
-using Xunit;
+﻿using Xunit;
 using Sep.Git.Tfs.Util;
 
 namespace Sep.Git.Tfs.Test.Util
 {
-    public class BouncerTest
+    public class BouncerTest : BaseTest
     {
-        Bouncer bouncer = new Bouncer();
+        private readonly Bouncer bouncer = new Bouncer();
 
         [Fact]
         public void NoExpressionsMeansNotMatched()

@@ -1,14 +1,10 @@
-﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Sep.Git.Tfs.Core;
 using Xunit;
-using Xunit.Extensions;
 
 namespace Sep.Git.Tfs.Test.Core
 {
-    public class CommitParserTests
+    public class CommitParserTests : BaseTest
     {
         public static IEnumerable<object[]> Cases
         {
@@ -31,7 +27,7 @@ namespace Sep.Git.Tfs.Test.Core
 
 
         [Theory]
-        [PropertyData("Cases")]
+        [MemberData("Cases")]
         public void Run(string message, bool expectParsed, int expectId)
         {
             int id;

@@ -1,14 +1,13 @@
-﻿using System.IO;
-using Sep.Git.Tfs.Commands;
+﻿using Sep.Git.Tfs.Commands;
 using StructureMap.AutoMocking;
 using NDesk.Options;
 using Xunit;
 
 namespace Sep.Git.Tfs.Test.Commands
 {
-    public class InitOptionsTest
+    public class InitOptionsTest : BaseTest
     {
-        private RhinoAutoMocker<InitOptions> mocks;
+        private readonly RhinoAutoMocker<InitOptions> mocks;
 
         public InitOptionsTest()
         {
@@ -26,7 +25,7 @@ namespace Sep.Git.Tfs.Test.Commands
         [Fact]
         public void AutoCrlfProvideTrue()
         {
-            string[] args = {"init", "--autocrlf=true", "http://example.com/tfs", "$/Junk"};
+            string[] args = { "init", "--autocrlf=true", "http://example.com/tfs", "$/Junk" };
             mocks.ClassUnderTest.OptionSet.Parse(args);
             Assert.Equal("true", mocks.ClassUnderTest.GitInitAutoCrlf);
         }
@@ -107,6 +106,5 @@ namespace Sep.Git.Tfs.Test.Commands
         }
 
         #endregion
-
     }
 }

@@ -5,7 +5,7 @@ using Sep.Git.Tfs.Commands;
 
 namespace Sep.Git.Tfs.Core
 {
-    class DerivedGitTfsRemote : IGitTfsRemote
+    internal class DerivedGitTfsRemote : IGitTfsRemote
     {
         private readonly string _tfsUrl;
         private readonly string _tfsRepositoryPath;
@@ -16,7 +16,7 @@ namespace Sep.Git.Tfs.Core
             _tfsRepositoryPath = tfsRepositoryPath;
         }
 
-        GitTfsException DerivedRemoteException
+        private GitTfsException DerivedRemoteException
         {
             get
             {
@@ -190,6 +190,16 @@ namespace Sep.Git.Tfs.Core
         public bool ExportMetadatas { get; set; }
         public Dictionary<string, string> ExportWorkitemsMapping { get; set; }
 
+        public int? GetInitialChangeset()
+        {
+            throw DerivedRemoteException;
+        }
+
+        public void SetInitialChangeset(int? changesetId)
+        {
+            throw DerivedRemoteException;
+        }
+
         public bool ShouldSkip(string path)
         {
             throw DerivedRemoteException;
@@ -205,7 +215,7 @@ namespace Sep.Git.Tfs.Core
             throw DerivedRemoteException;
         }
 
-        public IFetchResult Fetch(bool stopOnFailMergeCommit = false,  int lastChangesetIdToFetch = -1, IRenameResult renameResult = null)
+        public IFetchResult Fetch(bool stopOnFailMergeCommit = false, int lastChangesetIdToFetch = -1, IRenameResult renameResult = null)
         {
             throw DerivedRemoteException;
         }
@@ -281,6 +291,11 @@ namespace Sep.Git.Tfs.Core
         }
 
         public bool MatchesUrlAndRepositoryPath(string tfsUrl, string tfsRepositoryPath)
+        {
+            throw DerivedRemoteException;
+        }
+
+        public void DeleteShelveset(string shelvesetName)
         {
             throw DerivedRemoteException;
         }

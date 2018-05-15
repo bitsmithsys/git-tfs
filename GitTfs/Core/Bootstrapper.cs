@@ -1,18 +1,16 @@
-using System.IO;
 using Sep.Git.Tfs.Commands; // ToGitRefName() and RemoteOptions
+using System.Diagnostics;
 
 namespace Sep.Git.Tfs.Core
 {
     public class Bootstrapper
     {
-        readonly Globals _globals;
-        readonly TextWriter _stdout;
-        readonly RemoteOptions _remoteOptions;
+        private readonly Globals _globals;
+        private readonly RemoteOptions _remoteOptions;
 
-        public Bootstrapper(Globals globals, TextWriter stdout, RemoteOptions remoteOptions)
+        public Bootstrapper(Globals globals, RemoteOptions remoteOptions)
         {
             _globals = globals;
-            _stdout = stdout;
             _remoteOptions = remoteOptions;
         }
 
@@ -23,14 +21,14 @@ namespace Sep.Git.Tfs.Core
             {
                 var remoteId = GetRemoteId(changeset);
                 remote = _globals.Repository.CreateTfsRemote(new RemoteInfo
-                    {
-                        Id = remoteId,
-                        Url = changeset.Remote.TfsUrl,
-                        Repository = changeset.Remote.TfsRepositoryPath,
-                        RemoteOptions = _remoteOptions,
-                    }, string.Empty);
+                {
+                    Id = remoteId,
+                    Url = changeset.Remote.TfsUrl,
+                    Repository = changeset.Remote.TfsRepositoryPath,
+                    RemoteOptions = _remoteOptions,
+                }, string.Empty);
                 remote.UpdateTfsHead(changeset.GitCommit, changeset.ChangesetId);
-                _stdout.WriteLine("-> new remote '" + remote.Id + "'");
+                Trace.TraceInformation("-> new remote '" + remote.Id + "'");
             }
             else
             {
@@ -39,11 +37,11 @@ namespace Sep.Git.Tfs.Core
                 {
                     int oldChangeset = changeset.Remote.MaxChangesetId;
                     _globals.Repository.MoveTfsRefForwardIfNeeded(changeset.Remote);
-                    _stdout.WriteLine("-> existing remote {0} (updated from changeset {1})", changeset.Remote.Id, oldChangeset);
+                    Trace.TraceInformation("-> existing remote {0} (updated from changeset {1})", changeset.Remote.Id, oldChangeset);
                 }
                 else
                 {
-                    _stdout.WriteLine("-> existing remote {0} (up to date)", changeset.Remote.Id);
+                    Trace.TraceInformation("-> existing remote {0} (up to date)", changeset.Remote.Id);
                 }
             }
             return remote;
@@ -54,7 +52,7 @@ namespace Sep.Git.Tfs.Core
         {
             if (IsAvailable(GitTfsConstants.DefaultRepositoryId))
             {
-                _stdout.WriteLine("info: '" + changeset.Remote.TfsRepositoryPath + "' will be bootstraped as your main remote...");
+                Trace.TraceInformation("info: '" + changeset.Remote.TfsRepositoryPath + "' will be bootstraped as your main remote...");
                 return GitTfsConstants.DefaultRepositoryId;
             }
 

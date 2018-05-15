@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 using Rhino.Mocks;
@@ -8,12 +7,12 @@ using Sep.Git.Tfs.Core.TfsInterop;
 
 namespace Sep.Git.Tfs.Test.Core
 {
-    public class DirectoryTidierTests : IDisposable
+    public class DirectoryTidierTests : BaseTest, IDisposable
     {
-        MockRepository mocks;
-        ITfsWorkspaceModifier mockWorkspace;
-        TfsTreeEntry[] initialTfsTree;
-        DirectoryTidier _tidy;
+        private readonly MockRepository mocks;
+        private readonly ITfsWorkspaceModifier mockWorkspace;
+        private readonly TfsTreeEntry[] initialTfsTree;
+        private DirectoryTidier _tidy;
 
         public DirectoryTidierTests()
         {
@@ -45,7 +44,7 @@ namespace Sep.Git.Tfs.Test.Core
             mockWorkspace.VerifyAllExpectations();
         }
 
-        ITfsWorkspaceModifier Tidy
+        private ITfsWorkspaceModifier Tidy
         {
             get
             {
@@ -58,7 +57,7 @@ namespace Sep.Git.Tfs.Test.Core
             }
         }
 
-        void TidyDispose()
+        private void TidyDispose()
         {
             ((IDisposable)Tidy).Dispose();
         }
@@ -228,7 +227,7 @@ namespace Sep.Git.Tfs.Test.Core
                 tidy.Rename("oldFile.txt", "File.txt", ScoreIsIrrelevant));
         }
 
-        TfsTreeEntry item(TfsItemType itemType, string gitPath)
+        private TfsTreeEntry item(TfsItemType itemType, string gitPath)
         {
             return new TfsTreeEntry(gitPath, mocks.StrictMock<IItem>().Tap(mockItem => mockItem.Stub(x => x.ItemType).Return(itemType)));
         }
@@ -236,6 +235,6 @@ namespace Sep.Git.Tfs.Test.Core
         /// <summary>
         /// The score argument is passed through by DirectoryTidier, so its value doesn't matter.
         /// </summary>
-        const string ScoreIsIrrelevant = "irrelevant";
+        private const string ScoreIsIrrelevant = "irrelevant";
     }
 }

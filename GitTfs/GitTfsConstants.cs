@@ -14,11 +14,8 @@ namespace Sep.Git.Tfs
         public const string TfsRoot = "$/";
         public const string GitTfsPrefix = "git-tfs";
         public const string GitTfsWorkItemPrefix = GitTfsPrefix + "-work-item:";
-        public const string GitTfsCodeReviewerPrefix = GitTfsPrefix + "-code-reviewer:";
-        public const string GitTfsSecurityReviewerPrefix = GitTfsPrefix + "-security-reviewer:";
-        public const string GitTfsPerformanceReviewerPrefix = GitTfsPrefix + "-performance-reviewer:";
         public const string GitTfsPolicyOverrideCommentPrefix = GitTfsPrefix + "-force:";
-       // e.g. git-tfs-id: [http://team:8080/]$/sandbox;C123
+        // e.g. git-tfs-id: [http://team:8080/]$/sandbox;C123
         public const string TfsCommitInfoFormat = "git-tfs-id: [{0}]{1};C{2}";
         public static readonly Regex TfsCommitInfoRegex =
                 new Regex("^\\s*" +
@@ -27,7 +24,7 @@ namespace Sep.Git.Tfs
                           "\\[(?<url>.+)\\]" +
                           "(?<repository>\\$.+)?;" +
                           "C(?<changeset>\\d+)" +
-                          "\\s*$", RegexOptions.Multiline|RegexOptions.Compiled);
+                          "\\s*$", RegexOptions.Multiline | RegexOptions.Compiled);
         // e.g. git-tfs-work-item: 24 associate
         public static readonly Regex TfsWorkItemRegex =
                 new Regex(GitTfsWorkItemPrefix + @"\s*(?<item_id>\d+)(\s*(?<action>associate|resolve))?");
@@ -55,10 +52,6 @@ namespace Sep.Git.Tfs
         /// </summary>
         public const string RemoteSubtreeFormat = "{0}_subtree/{1}";
 
-        public const string CodeReviewer = "Code Reviewer";
-        public const string SecurityReviewer = "Security Reviewer"; 
-        public const string PerformanceReviewer = "Performance Reviewer";
-
         public const string ExportMetadatasConfigKey = GitTfsPrefix + ".export-metadatas";
         public const string WorkspaceConfigKey = GitTfsPrefix + ".workspace-dir";
 
@@ -74,5 +67,6 @@ namespace Sep.Git.Tfs
             + "Note: If you want to force git-tfs to use another version of the tfs client library,"
             + Environment.NewLine
             + "set the environment variable `GIT_TFS_CLIENT` with the wished version (ie: '2013' for Visual Studio 2013,...)";
+        public const string LogFileName = "git-tfs_log.txt";
     }
 }

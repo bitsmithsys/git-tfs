@@ -3,12 +3,12 @@ using Xunit;
 
 namespace Sep.Git.Tfs.Test.Core
 {
-    public class ModeTests
+    public class ModeTests : BaseTest
     {
         [Fact]
         public void ShouldGetNewFileMode()
         {
-            Assert.Equal("100644", Sep.Git.Tfs.Core.Mode.NewFile);
+            Assert.Equal("100644", Mode.NewFile);
         }
 
         [Fact]

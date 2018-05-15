@@ -110,7 +110,7 @@ namespace Sep.Git.Tfs.VsCommon
 
         public void Get(ITfsWorkspace workspace, IEnumerable<IChange> changes, Action<Exception> ignorableErrorHandler)
         {
-            workspace.Get(this.ChangesetId, changes);
+            workspace.Get(ChangesetId, changes);
         }
     }
 
@@ -452,7 +452,7 @@ namespace Sep.Git.Tfs.VsCommon
             return _workspace.PendRename(pathFrom, pathTo);
         }
 
-        void DoUntilNoFailures(Func<GetStatus> get)
+        private void DoUntilNoFailures(Func<GetStatus> get)
         {
             Retry.DoWhile(() => get().NumFailures != 0);
         }
@@ -540,7 +540,7 @@ namespace Sep.Git.Tfs.VsCommon
 
     public class WrapperForBranchObject : WrapperFor<BranchObject>, IBranchObject
     {
-        BranchObject _branch;
+        private readonly BranchObject _branch;
 
         public WrapperForBranchObject(BranchObject branch)
             : base(branch)

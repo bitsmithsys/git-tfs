@@ -1,18 +1,14 @@
 ﻿using System;
-using System.IO;
-using System.Linq;
 using Sep.Git.Tfs.Core;
-using Sep.Git.Tfs.Core.TfsInterop;
 using Sep.Git.Tfs.Util;
 using StructureMap;
 using Xunit;
-using LibGit2Sharp;
 
 namespace Sep.Git.Tfs.Test.Integration
 {
-    public class ConfigPropertyLoaderTests : IDisposable
+    public class ConfigPropertyLoaderTests : BaseTest, IDisposable
     {
-        IntegrationHelper h = new IntegrationHelper();
+        private readonly IntegrationHelper h = new IntegrationHelper();
 
         public ConfigPropertyLoaderTests()
         {
@@ -34,10 +30,9 @@ namespace Sep.Git.Tfs.Test.Integration
 
             using (var repo = h.Repository("repo"))
             {
-                var gitRepository = new GitRepository(new StringWriter(), repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
+                var gitRepository = new GitRepository(repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
                 var configProperties = new ConfigProperties(new ConfigPropertyLoader(new Globals() { Repository = gitRepository }));
                 Assert.Equal(100, configProperties.BatchSize);
-
             }
         }
 
@@ -52,7 +47,7 @@ namespace Sep.Git.Tfs.Test.Integration
             h.SetConfig("repo", GitTfsConstants.BatchSize, "25");
             using (var repo = h.Repository("repo"))
             {
-                var gitRepository = new GitRepository(new StringWriter(), repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
+                var gitRepository = new GitRepository(repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
                 var configProperties = new ConfigProperties(new ConfigPropertyLoader(new Globals() { Repository = gitRepository }));
 
                 configProperties.BatchSize = 10;
@@ -71,7 +66,7 @@ namespace Sep.Git.Tfs.Test.Integration
             h.SetConfig("repo", GitTfsConstants.BatchSize, "5");
             using (var repo = h.Repository("repo"))
             {
-                var gitRepository = new GitRepository(new StringWriter(), repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
+                var gitRepository = new GitRepository(repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
                 var configProperties = new ConfigProperties(new ConfigPropertyLoader(new Globals() { Repository = gitRepository }));
 
                 Assert.Equal(5, configProperties.BatchSize);
@@ -88,9 +83,9 @@ namespace Sep.Git.Tfs.Test.Integration
 
             using (var repo = h.Repository("repo"))
             {
-                var gitRepository = new GitRepository(new StringWriter(), repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
+                var gitRepository = new GitRepository(repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
                 var configProperties = new ConfigProperties(new ConfigPropertyLoader(new Globals() { Repository = gitRepository }));
-                
+
                 configProperties.BatchSize = 7;
                 configProperties.PersistAllOverrides();
                 Assert.Equal("7", h.GetConfig<string>("repo", GitTfsConstants.BatchSize));

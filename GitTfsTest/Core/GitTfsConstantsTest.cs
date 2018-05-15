@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Xunit;
+﻿using Xunit;
 
 namespace Sep.Git.Tfs.Test.Core
 {
-    public class GitTfsConstantsTest
+    public class GitTfsConstantsTest : BaseTest
     {
         [Fact]
         public void TestTfsCommitInfoRegex_WhenTheRepositoryContainsSquareBrackets_ThenWeGetTheCorrectValues()
@@ -23,6 +19,5 @@ namespace Sep.Git.Tfs.Test.Core
             Assert.Equal(repository, match.Groups["repository"].Value);
             Assert.Equal(changesetId, match.Groups["changeset"].Value);
         }
-
     }
 }

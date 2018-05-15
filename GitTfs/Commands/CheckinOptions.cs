@@ -44,9 +44,9 @@ namespace Sep.Git.Tfs.Commands
             }
         }
 
-        private List<string> _workItemsToAssociate = new List<string>();
-        private List<string> _workItemsToResolve = new List<string>();
-        private Dictionary<string, string> _checkinNotes = new Dictionary<string, string>();
+        private readonly List<string> _workItemsToAssociate = new List<string>();
+        private readonly List<string> _workItemsToResolve = new List<string>();
+        private readonly Dictionary<string, string> _checkinNotes = new Dictionary<string, string>();
 
         public string CheckinComment { get; set; }
         // This can be extended to checkin when the $EDITOR is invoked.
@@ -63,6 +63,5 @@ namespace Sep.Git.Tfs.Commands
         public Regex WorkItemAssociateRegex { get; set; }
         public bool IgnoreMissingItems { get; set; }
         public bool AddMissingItems { get; set; }
-
     }
 }

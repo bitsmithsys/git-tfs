@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using Rhino.Mocks;
 using Sep.Git.Tfs.Commands;
 using Sep.Git.Tfs.Util;
@@ -10,7 +8,7 @@ using Xunit;
 
 namespace Sep.Git.Tfs.Test.Util
 {
-    public class GitTfsCommandRunnerTests
+    public class GitTfsCommandRunnerTests : BaseTest
     {
         #region Base implementation of GitTfsCommand, for tests
 
@@ -21,14 +19,14 @@ namespace Sep.Git.Tfs.Test.Util
             {
                 public Form Form { get; private set; }
                 public IList<string> Args { get; private set; }
-                private Invocation(){}
+                private Invocation() { }
                 public static Invocation List(IList<string> args)
                 {
-                    return new Invocation {Form = Form.List, Args = args};
+                    return new Invocation { Form = Form.List, Args = args };
                 }
-                public static Invocation Split(params string[]args)
+                public static Invocation Split(params string[] args)
                 {
-                    return new Invocation {Form = Form.Split, Args = args};
+                    return new Invocation { Form = Form.Split, Args = args };
                 }
             }
             internal List<Invocation> Calls = new List<Invocation>();
@@ -37,15 +35,14 @@ namespace Sep.Git.Tfs.Test.Util
         }
         #endregion
 
-        private RhinoAutoMocker<GitTfsCommandRunner> _mocks;
+        private readonly RhinoAutoMocker<GitTfsCommandRunner> _mocks;
 
         public GitTfsCommandRunnerTests()
         {
             _mocks = new RhinoAutoMocker<GitTfsCommandRunner>(MockMode.AAA);
-            _mocks.Inject<TextWriter>(new StringWriter());
         }
 
-        IList<string> Args(params string[] args)
+        private IList<string> Args(params string[] args)
         {
             return args;
         }

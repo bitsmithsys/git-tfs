@@ -24,15 +24,13 @@ namespace Sep.Git.Tfs.VsFake
     {
         #region misc/null
 
-        IContainer _container;
-        TextWriter _stdout;
-        Script _script;
-        FakeVersionControlServer _versionControlServer;
+        private readonly IContainer _container;
+        private readonly Script _script;
+        private readonly FakeVersionControlServer _versionControlServer;
 
-        public TfsHelper(IContainer container, TextWriter stdout, Script script)
+        public TfsHelper(IContainer container, Script script)
         {
             _container = container;
-            _stdout = stdout;
             _script = script;
             _versionControlServer = new FakeVersionControlServer(_script);
         }
@@ -43,9 +41,9 @@ namespace Sep.Git.Tfs.VsFake
         public string Username { get; set; }
         public string Password { get; set; }
 
-        public void EnsureAuthenticated() {}
+        public void EnsureAuthenticated() { }
 
-        public void SetPathResolver() {}
+        public void SetPathResolver() { }
 
         public bool CanShowCheckinDialog { get { return false; } }
 
@@ -91,7 +89,6 @@ namespace Sep.Git.Tfs.VsFake
             if (firstChangesetOfBranch != null)
                 return firstChangesetOfBranch.MergeChangesetDatas.BeforeMergeChangesetId;
             return -1;
-
         }
 
         private ITfsChangeset BuildTfsChangeset(ScriptedChangeset changeset, IGitTfsRemote remote)
@@ -101,10 +98,10 @@ namespace Sep.Git.Tfs.VsFake
             return tfsChangeset;
         }
 
-        class Changeset : IChangeset
+        private class Changeset : IChangeset
         {
-            private IVersionControlServer _versionControlServer;
-            private ScriptedChangeset _changeset;
+            private readonly IVersionControlServer _versionControlServer;
+            private readonly ScriptedChangeset _changeset;
 
             public Changeset(IVersionControlServer versionControlServer, ScriptedChangeset changeset)
             {
@@ -144,15 +141,15 @@ namespace Sep.Git.Tfs.VsFake
 
             public void Get(ITfsWorkspace workspace, IEnumerable<IChange> changes, Action<Exception> ignorableErrorHandler)
             {
-                workspace.Get(this.ChangesetId, changes);
+                workspace.Get(ChangesetId, changes);
             }
         }
 
-        class Change : IChange, IItem
+        private class Change : IChange, IItem
         {
-            IVersionControlServer _versionControlServer;
-            ScriptedChangeset _changeset;
-            ScriptedChange _change;
+            private readonly IVersionControlServer _versionControlServer;
+            private readonly ScriptedChangeset _changeset;
+            private readonly ScriptedChange _change;
 
             public Change(IVersionControlServer versionControlServer, ScriptedChangeset changeset, ScriptedChange change)
             {
@@ -213,8 +210,8 @@ namespace Sep.Git.Tfs.VsFake
             TemporaryFile IItem.DownloadFile()
             {
                 var temp = new TemporaryFile();
-                using(var stream = File.Create(temp))
-                using(var writer = new BinaryWriter(stream))
+                using (var stream = File.Create(temp))
+                using (var writer = new BinaryWriter(stream))
                     writer.Write(_change.Content);
                 return temp;
             }
@@ -224,18 +221,18 @@ namespace Sep.Git.Tfs.VsFake
 
         #region workspaces
 
-         public void WithWorkspace(string localDirectory, IGitTfsRemote remote, IEnumerable<Tuple<string, string>> mappings, TfsChangesetInfo versionToFetch, Action<ITfsWorkspace> action)
-         {
-             Trace.WriteLine("Setting up a TFS workspace at " + localDirectory);
-             var fakeWorkspace = new FakeWorkspace(localDirectory, remote.TfsRepositoryPath);
-             var workspace = _container.With("localDirectory").EqualTo(localDirectory)
-                 .With("remote").EqualTo(remote)
-                 .With("contextVersion").EqualTo(versionToFetch)
-                 .With("workspace").EqualTo(fakeWorkspace)
-                 .With("tfsHelper").EqualTo(this)
-                 .GetInstance<TfsWorkspace>();
-             action(workspace);
-         }
+        public void WithWorkspace(string localDirectory, IGitTfsRemote remote, IEnumerable<Tuple<string, string>> mappings, TfsChangesetInfo versionToFetch, Action<ITfsWorkspace> action)
+        {
+            Trace.WriteLine("Setting up a TFS workspace at " + localDirectory);
+            var fakeWorkspace = new FakeWorkspace(localDirectory, remote.TfsRepositoryPath);
+            var workspace = _container.With("localDirectory").EqualTo(localDirectory)
+                .With("remote").EqualTo(remote)
+                .With("contextVersion").EqualTo(versionToFetch)
+                .With("workspace").EqualTo(fakeWorkspace)
+                .With("tfsHelper").EqualTo(this)
+                .GetInstance<TfsWorkspace>();
+            action(workspace);
+        }
 
         public void WithWorkspace(string directory, IGitTfsRemote remote, TfsChangesetInfo versionToFetch, Action<ITfsWorkspace> action)
         {
@@ -250,10 +247,10 @@ namespace Sep.Git.Tfs.VsFake
             action(workspace);
         }
 
-        class FakeWorkspace : IWorkspace
+        private class FakeWorkspace : IWorkspace
         {
-            string _directory;
-            string _repositoryRoot;
+            private readonly string _directory;
+            private readonly string _repositoryRoot;
 
             public FakeWorkspace(string directory, string repositoryRoot)
             {
@@ -269,7 +266,7 @@ namespace Sep.Git.Tfs.VsFake
             public void GetSpecificVersion(int changeset, IEnumerable<IChange> changes)
             {
                 var repositoryRoot = _repositoryRoot.ToLower();
-                if(!repositoryRoot.EndsWith("/")) repositoryRoot += "/";
+                if (!repositoryRoot.EndsWith("/")) repositoryRoot += "/";
                 foreach (var change in changes)
                 {
                     if (change.Item.ItemType == TfsItemType.File)
@@ -392,20 +389,25 @@ namespace Sep.Git.Tfs.VsFake
 
         public IList<RootBranch> GetRootChangesetForBranch(string tfsPathBranchToCreate, int lastChangesetIdToCheck = -1, string tfsPathParentBranch = null)
         {
-            var firstChangesetOfBranch = _script.Changesets.FirstOrDefault(c => c.IsBranchChangeset && c.BranchChangesetDatas.BranchPath == tfsPathBranchToCreate);
+            var branchChangesets = _script.Changesets.Where(c => c.IsBranchChangeset);
+            var firstBranchChangeset = branchChangesets.FirstOrDefault(c => c.BranchChangesetDatas.BranchPath == tfsPathBranchToCreate);
+
             var rootBranches = new List<RootBranch>();
-            var branchChangeset = _script.Changesets.Where(c => c.IsBranchChangeset).ToList();
-            if (firstChangesetOfBranch != null)
+            if (firstBranchChangeset != null)
             {
                 do
                 {
-                    var branch = new RootBranch(firstChangesetOfBranch.BranchChangesetDatas.RootChangesetId,
-                        firstChangesetOfBranch.BranchChangesetDatas.BranchPath);
-                    branch.IsRenamedBranch = DeletedBranchesPathes.Contains(branch.TfsBranchPath);
-                    rootBranches.Add(branch);
-                    firstChangesetOfBranch = branchChangeset.FirstOrDefault(
-                            c => c.BranchChangesetDatas.BranchPath == firstChangesetOfBranch.BranchChangesetDatas.ParentBranch);
-                } while (firstChangesetOfBranch != null);
+                    var rootBranch = new RootBranch(
+                        firstBranchChangeset.BranchChangesetDatas.RootChangesetId,
+                        firstBranchChangeset.Id,
+                        firstBranchChangeset.BranchChangesetDatas.BranchPath
+                    );
+
+                    rootBranch.IsRenamedBranch = DeletedBranchesPathes.Contains(rootBranch.TfsBranchPath);
+                    rootBranches.Add(rootBranch);
+
+                    firstBranchChangeset = branchChangesets.FirstOrDefault(c => c.BranchChangesetDatas.BranchPath == firstBranchChangeset.BranchChangesetDatas.ParentBranch);
+                } while (firstBranchChangeset != null);
                 rootBranches.Reverse();
                 return rootBranches;
             }
@@ -414,7 +416,7 @@ namespace Sep.Git.Tfs.VsFake
         }
 
         private List<string> _deletedBranchesPathes;
-        List<string> DeletedBranchesPathes
+        private List<string> DeletedBranchesPathes
         {
             get
             {
@@ -429,15 +431,15 @@ namespace Sep.Git.Tfs.VsFake
             var renamings = _script.Changesets.Where(
                 c => c.IsBranchChangeset &&
                 DeletedBranchesPathes.Any(b => b == c.BranchChangesetDatas.BranchPath)).ToList();
-            
+
             var branches = new List<IBranchObject>();
             branches.AddRange(_script.RootBranches.Select(b => new MockBranchObject { IsRoot = true, Path = b.BranchPath, ParentPath = null }));
-            branches.AddRange(_script.Changesets.Where(c=>c.IsBranchChangeset).Select(c => new MockBranchObject
-                    {
-                        IsRoot = false,
-                        Path = c.BranchChangesetDatas.BranchPath,
-                        ParentPath = GetRealRootBranch(renamings, c.BranchChangesetDatas.ParentBranch)
-                    }));
+            branches.AddRange(_script.Changesets.Where(c => c.IsBranchChangeset).Select(c => new MockBranchObject
+            {
+                IsRoot = false,
+                Path = c.BranchChangesetDatas.BranchPath,
+                ParentPath = GetRealRootBranch(renamings, c.BranchChangesetDatas.ParentBranch)
+            }));
             if (!getDeletedBranches)
                 branches.RemoveAll(b => DeletedBranchesPathes.Contains(b.Path));
 
@@ -523,11 +525,16 @@ namespace Sep.Git.Tfs.VsFake
             throw new NotImplementedException();
         }
 
+        public void DeleteShelveset(IWorkspace workspace, string shelvesetName)
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         private class FakeVersionControlServer : IVersionControlServer
         {
-            Script _script;
+            private readonly Script _script;
 
             public FakeVersionControlServer(Script script)
             {

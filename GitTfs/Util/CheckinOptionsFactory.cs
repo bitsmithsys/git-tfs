@@ -1,4 +1,3 @@
-using System.IO;
 using Sep.Git.Tfs.Commands;
 using Sep.Git.Tfs.Core;
 
@@ -15,26 +14,24 @@ namespace Sep.Git.Tfs.Util
     /// </remarks>
     public class CheckinOptionsFactory
     {
-        private readonly TextWriter writer;
-        private readonly Globals globals;
+        private readonly Globals _globals;
 
-        public CheckinOptionsFactory(TextWriter writer, Globals globals)
+        public CheckinOptionsFactory(Globals globals)
         {
-            this.writer = writer;
-            this.globals = globals;
+            _globals = globals;
         }
 
         public CheckinOptions BuildCommitSpecificCheckinOptions(CheckinOptions sourceCheckinOptions, string commitMessage)
         {
-            var customCheckinOptions = sourceCheckinOptions.Clone(this.globals);
+            var customCheckinOptions = sourceCheckinOptions.Clone(_globals);
 
             customCheckinOptions.CheckinComment = commitMessage;
 
-            customCheckinOptions.ProcessWorkItemCommands(writer);
+            customCheckinOptions.ProcessWorkItemCommands();
 
-            customCheckinOptions.ProcessCheckinNoteCommands(writer);
+            customCheckinOptions.ProcessCheckinNoteCommands();
 
-            customCheckinOptions.ProcessForceCommand(writer);
+            customCheckinOptions.ProcessForceCommand();
 
             return customCheckinOptions;
         }
@@ -44,7 +41,7 @@ namespace Sep.Git.Tfs.Util
         {
             var customCheckinOptions = BuildCommitSpecificCheckinOptions(sourceCheckinOptions, commitMessage);
 
-            customCheckinOptions.ProcessAuthor(writer, commit, authors);
+            customCheckinOptions.ProcessAuthor(commit, authors);
 
             return customCheckinOptions;
         }
@@ -52,11 +49,11 @@ namespace Sep.Git.Tfs.Util
         public CheckinOptions BuildShelveSetSpecificCheckinOptions(CheckinOptions sourceCheckinOptions,
             string commitMessage)
         {
-            var customCheckinOptions = sourceCheckinOptions.Clone(this.globals);
+            var customCheckinOptions = sourceCheckinOptions.Clone(_globals);
 
             customCheckinOptions.CheckinComment = commitMessage;
 
-            customCheckinOptions.ProcessWorkItemCommands(writer, false);
+            customCheckinOptions.ProcessWorkItemCommands(false);
 
             return customCheckinOptions;
         }

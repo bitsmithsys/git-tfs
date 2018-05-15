@@ -16,16 +16,16 @@ namespace Sep.Git.Tfs.Core
         private readonly IContainer _container;
         private readonly Globals _globals;
         private IDictionary<string, IGitTfsRemote> _cachedRemotes;
-        private Repository _repository;
-        private RemoteConfigConverter _remoteConfigReader;
+        private readonly Repository _repository;
+        private readonly RemoteConfigConverter _remoteConfigReader;
 
-        public GitRepository(TextWriter stdout, string gitDir, IContainer container, Globals globals, RemoteConfigConverter remoteConfigReader)
-            : base(stdout, container)
+        public GitRepository(string gitDir, IContainer container, Globals globals, RemoteConfigConverter remoteConfigReader)
+            : base(container)
         {
             _container = container;
             _globals = globals;
             GitDir = gitDir;
-            _repository = new LibGit2Sharp.Repository(GitDir);
+            _repository = new Repository(GitDir);
             _remoteConfigReader = remoteConfigReader;
         }
 
@@ -54,7 +54,7 @@ namespace Sep.Git.Tfs.Core
             if (message == null)
                 _repository.Refs.Add(gitRefName, shaCommit, allowOverwrite: true);
             else
-                _repository.Refs.Add(gitRefName, shaCommit, _repository.Config.BuildSignature(DateTime.Now), message, true);
+                _repository.Refs.Add(gitRefName, shaCommit, message, true);
         }
 
         public static string ShortToLocalName(string branchName)
@@ -159,8 +159,8 @@ namespace Sep.Git.Tfs.Core
         public IEnumerable<string> GetGitRemoteBranches(string gitRemote)
         {
             gitRemote = gitRemote + "/";
-            var references = _repository.Branches.Where(b => b.IsRemote && b.Name.StartsWith(gitRemote) && !b.Name.EndsWith("/HEAD"));
-            return references.Select(r => r.Name);
+            var references = _repository.Branches.Where(b => b.IsRemote && b.FriendlyName.StartsWith(gitRemote) && !b.FriendlyName.EndsWith("/HEAD"));
+            return references.Select(r => r.FriendlyName);
         }
 
         private IDictionary<string, IGitTfsRemote> GetTfsRemotes()
@@ -177,7 +177,7 @@ namespace Sep.Git.Tfs.Core
             // When creating branches we use the empty string to indicate that we do not want to set the value at all.
             if (autocrlf == null)
                 autocrlf = "false";
-            if (autocrlf != String.Empty)
+            if (autocrlf != string.Empty)
                 _repository.Config.Set("core.autocrlf", autocrlf);
 
             if (ignorecase != null)
@@ -231,7 +231,7 @@ namespace Sep.Git.Tfs.Core
                 throw new GitTfsException(string.Format("error: this remote name \"{0}\" is already used!", newRemoteName));
 
             var oldRemote = ReadTfsRemote(oldRemoteName);
-            if(oldRemote == null)
+            if (oldRemote == null)
                 throw new GitTfsException(string.Format("error: the remote \"{0}\" doesn't exist!", oldRemoteName));
 
             var remoteInfo = oldRemote.RemoteInfo;
@@ -274,7 +274,7 @@ namespace Sep.Git.Tfs.Core
         public bool IsInSameTeamProjectAsDefaultRepository(string tfsRepositoryPath)
         {
             IGitTfsRemote defaultRepository;
-            if (!this.GetTfsRemotes().TryGetValue(GitTfsConstants.DefaultRepositoryId, out defaultRepository))
+            if (!GetTfsRemotes().TryGetValue(GitTfsConstants.DefaultRepositoryId, out defaultRepository))
             {
                 return true;
             }
@@ -316,8 +316,8 @@ namespace Sep.Git.Tfs.Core
         public MergeResult Merge(string commitish)
         {
             var commit = _repository.Lookup<Commit>(commitish);
-            if(commit == null)
-                throw new GitTfsException("error: commit '"+ commitish + "' can't be found and merged into!");
+            if (commit == null)
+                throw new GitTfsException("error: commit '" + commitish + "' can't be found and merged into!");
             return _repository.Merge(commit, _repository.Config.BuildSignature(new DateTimeOffset(DateTime.Now)));
         }
 
@@ -437,7 +437,7 @@ namespace Sep.Git.Tfs.Core
         {
             var message = new System.Text.StringBuilder();
             foreach (Commit comm in
-                _repository.Commits.QueryBy(new CommitFilter { Since = head, Until = parentCommitish }))
+                _repository.Commits.QueryBy(new CommitFilter { IncludeReachableFrom = head, ExcludeReachableFrom = parentCommitish }))
             {
                 // Normalize commit message line endings to CR+LF style, so that message
                 // would be correctly shown in TFS commit dialog.
@@ -456,7 +456,7 @@ namespace Sep.Git.Tfs.Core
 
         private void ParseEntries(IDictionary<string, GitObject> entries, Tree treeInfo, string commit)
         {
-            var treesToDescend = new Queue<Tree>(new[] {treeInfo});
+            var treesToDescend = new Queue<Tree>(new[] { treeInfo });
             while (treesToDescend.Any())
             {
                 var currentTree = treesToDescend.Dequeue();
@@ -493,7 +493,7 @@ namespace Sep.Git.Tfs.Core
 
         private IGitChangedFile BuildGitChangedFile(GitChangeInfo change)
         {
-            return change.ToGitChangedFile(_container.With((IGitRepository) this));
+            return change.ToGitChangedFile(_container.With((IGitRepository)this));
         }
 
         public bool WorkingCopyHasUnstagedOrUncommitedChanges
@@ -502,25 +502,25 @@ namespace Sep.Git.Tfs.Core
             {
                 if (IsBare)
                     return false;
-                return (from 
+                return (from
                             entry in _repository.RetrieveStatus()
-                        where 
+                        where
                             entry.State != FileStatus.Ignored &&
-                            entry.State != FileStatus.Untracked
+                            entry.State != FileStatus.NewInWorkdir
                         select entry).Any();
             }
         }
 
         public void CopyBlob(string sha, string outputFile)
         {
-            Blob blob; 
+            Blob blob;
             var destination = new FileInfo(outputFile);
             if (!destination.Directory.Exists)
                 destination.Directory.Create();
             if ((blob = _repository.Lookup<Blob>(sha)) != null)
                 using (Stream stream = blob.GetContentStream())
                 using (var outstream = File.Create(destination.FullName))
-                        stream.CopyTo(outstream);
+                    stream.CopyTo(outstream);
         }
 
         public string AssertValidBranchName(string gitBranchName)
@@ -545,7 +545,7 @@ namespace Sep.Git.Tfs.Core
                 if (i < parts.Length)
                     refName += '/' + parts[i];
             }
-            
+
             return false;
         }
 
@@ -605,12 +605,12 @@ namespace Sep.Git.Tfs.Core
 
             var reachableFromRemoteBranches = new CommitFilter
             {
-                Since = _repository.Branches.Where(p => p.IsRemote),
+                IncludeReachableFrom = _repository.Branches.Where(p => p.IsRemote),
                 SortBy = CommitSortStrategies.Time
             };
 
             if (remoteRef != null)
-                reachableFromRemoteBranches.Since = _repository.Branches.Where(p => p.IsRemote && p.CanonicalName.EndsWith(remoteRef));
+                reachableFromRemoteBranches.IncludeReachableFrom = _repository.Branches.Where(p => p.IsRemote && p.CanonicalName.EndsWith(remoteRef));
             var commitsFromRemoteBranches = _repository.Commits.QueryBy(reachableFromRemoteBranches);
 
             Commit commit = null;
@@ -633,7 +633,7 @@ namespace Sep.Git.Tfs.Core
             return commit;
         }
 
-        public void CreateTag(string name, string sha, string comment, string Owner, string emailOwner, System.DateTime creationDate)
+        public void CreateTag(string name, string sha, string comment, string Owner, string emailOwner, DateTime creationDate)
         {
             if (_repository.Tags[name] == null)
                 _repository.ApplyTag(name, sha, new Signature(Owner, emailOwner, new DateTimeOffset(creationDate)), comment);
@@ -677,6 +677,8 @@ namespace Sep.Git.Tfs.Core
 
         public void GarbageCollect(bool auto, string additionalMessage)
         {
+            if (Globals.DisableGarbageCollect)
+                return;
             try
             {
                 if (auto)
@@ -687,7 +689,7 @@ namespace Sep.Git.Tfs.Core
             catch (Exception e)
             {
                 Trace.WriteLine(e);
-                realStdout.WriteLine("Warning: `git gc` failed! " + additionalMessage);
+                Trace.TraceWarning("Warning: `git gc` failed! " + additionalMessage);
             }
         }
 
@@ -698,7 +700,7 @@ namespace Sep.Git.Tfs.Core
                 _repository.Checkout(commitish);
                 return true;
             }
-            catch (MergeConflictException)
+            catch (CheckoutConflictException)
             {
                 return false;
             }
@@ -707,16 +709,43 @@ namespace Sep.Git.Tfs.Core
         public IEnumerable<GitCommit> FindParentCommits(string @from, string to)
         {
             var commits = _repository.Commits.QueryBy(
-                new CommitFilter() {Since = @from, Until = to, SortBy = CommitSortStrategies.Reverse, FirstParentOnly = true})
-                .Select(c=>new GitCommit(c));
+                new CommitFilter() { IncludeReachableFrom = @from, ExcludeReachableFrom = to, SortBy = CommitSortStrategies.Reverse, FirstParentOnly = true })
+                .Select(c => new GitCommit(c));
             var parent = to;
             foreach (var gitCommit in commits)
             {
-                if(!gitCommit.Parents.Any(c=>c.Sha == parent))
+                if (!gitCommit.Parents.Any(c => c.Sha == parent))
                     return new List<GitCommit>();
                 parent = gitCommit.Sha;
             }
             return commits;
+        }
+
+        public bool IsPathIgnored(string relativePath)
+        {
+            return _repository.Ignore.IsPathIgnored(relativePath);
+        }
+
+        public string CommitGitIgnore(string pathToGitIgnoreFile)
+        {
+            if (!File.Exists(pathToGitIgnoreFile))
+            {
+                Trace.TraceWarning("warning: the .gitignore file specified '{0}' does not exist!", pathToGitIgnoreFile);
+            }
+            var gitTreeBuilder = new GitTreeBuilder(_repository.ObjectDatabase);
+            gitTreeBuilder.Add(".gitignore", pathToGitIgnoreFile, LibGit2Sharp.Mode.NonExecutableFile);
+            var tree = gitTreeBuilder.GetTree();
+            var signature = new Signature("git-tfs", "git-tfs@noreply.com", new DateTimeOffset(2000, 1, 1, 0, 0, 0, new TimeSpan(0)));
+            var sha = _repository.ObjectDatabase.CreateCommit(signature, signature, ".gitignore", tree, new Commit[0], false).Sha;
+            Trace.WriteLine(".gitignore commit created: " + sha);
+
+            _repository.Refs.Add(ShortToTfsRemoteName("default"), new ObjectId(sha));
+            _repository.Refs.Add(ShortToLocalName("master"), new ObjectId(sha));
+            //Should add ourself the rules to the temporary rules because committing directly to the git database
+            //prevent libgit2sharp to detect the new .gitignore file
+            _repository.Ignore.AddTemporaryRules(File.ReadLines(pathToGitIgnoreFile));
+
+            return sha;
         }
     }
 }

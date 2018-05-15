@@ -44,7 +44,7 @@ namespace Sep.Git.Tfs.Core
         bool CreateBranch(string gitBranchName, string target);
         Branch RenameBranch(string oldName, string newName);
         string FindCommitHashByChangesetId(int changesetId);
-        void CreateTag(string name, string sha, string comment, string Owner, string emailOwner, System.DateTime creationDate);
+        void CreateTag(string name, string sha, string comment, string Owner, string emailOwner, DateTime creationDate);
         void CreateNote(string sha, string content, string owner, string emailOwner, DateTime creationDate);
         void MoveRemote(string oldRemoteName, string newRemoteName);
         void ResetHard(string sha);
@@ -59,5 +59,7 @@ namespace Sep.Git.Tfs.Core
         void GarbageCollect(bool auto = false, string additionalMessage = null);
         bool Checkout(string commitish);
         IEnumerable<GitCommit> FindParentCommits(string fromCommit, string toCommit);
+        bool IsPathIgnored(string relativePath);
+        string CommitGitIgnore(string pathToGitIgnoreFile);
     }
 }

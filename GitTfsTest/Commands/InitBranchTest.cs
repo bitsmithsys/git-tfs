@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using Rhino.Mocks;
 using Sep.Git.Tfs.Commands;
 using Sep.Git.Tfs.Core;
@@ -8,19 +7,17 @@ using Sep.Git.Tfs.Core.TfsInterop;
 using Sep.Git.Tfs.VsFake;
 using StructureMap.AutoMocking;
 using Xunit;
-using Sep.Git.Tfs.Util;
 
 namespace Sep.Git.Tfs.Test.Commands
 {
-    public class InitBranchTest
+    public class InitBranchTest : BaseTest
     {
         #region Test Init
-        private RhinoAutoMocker<InitBranch> mocks;
+        private readonly RhinoAutoMocker<InitBranch> mocks;
 
         public InitBranchTest()
         {
             mocks = new RhinoAutoMocker<InitBranch>();
-            mocks.Inject<TextWriter>(new StringWriter());
             mocks.Get<Globals>().Repository = mocks.Get<IGitRepository>();
         }
 
@@ -34,7 +31,7 @@ namespace Sep.Git.Tfs.Test.Commands
             remote.TfsPassword = "pwd";
             remote.TfsRepositoryPath = "$/MyProject/Trunk";
             remote.TfsUrl = "http://myTfsServer:8080/tfs";
-            remote.Tfs = new VsFake.TfsHelper(mocks.Container, null, null);
+            remote.Tfs = new TfsHelper(mocks.Container, null);
             gitRepository.Stub(r => r.GitDir).Return(".");
             gitRepository.Stub(r => r.HasRemote(Arg<string>.Is.Anything)).Return(true);
 
@@ -100,7 +97,7 @@ namespace Sep.Git.Tfs.Test.Commands
             existingBranchRemote.TfsPassword = "pwd";
             existingBranchRemote.TfsRepositoryPath = "$/MyProject/MyBranch";
             existingBranchRemote.TfsUrl = "http://myTfsServer:8080/tfs";
-            existingBranchRemote.Tfs = new VsFake.TfsHelper(mocks.Container, null, null);
+            existingBranchRemote.Tfs = new TfsHelper(mocks.Container, null);
 
             gitRepository.Expect(x => x.ReadTfsRemote("default")).Return(remote).Repeat.Once();
             gitRepository.Expect(x => x.ReadAllTfsRemotes()).Return(new List<IGitTfsRemote> { remote, existingBranchRemote }).Repeat.Once();
@@ -147,7 +144,7 @@ namespace Sep.Git.Tfs.Test.Commands
             gitRepository.Expect(x => x.ReadAllTfsRemotes()).Return(new List<IGitTfsRemote> { remote }).Repeat.Once();
             gitRepository.Expect(x => x.AssertValidBranchName(GIT_BRANCH_TO_INIT)).Return(GIT_BRANCH_TO_INIT).Repeat.Never();
 
-            var ex = Assert.Throws(typeof(GitTfsException), ()=>mocks.ClassUnderTest.Run("$/MyProject/MyBranch"));
+            var ex = Assert.Throws(typeof(GitTfsException), () => mocks.ClassUnderTest.Run("$/MyProject/MyBranch"));
             Assert.Equal("error: Couldn't fetch parent branch\n", ex.Message);
 
             gitRepository.VerifyAllExpectations();
@@ -203,7 +200,7 @@ namespace Sep.Git.Tfs.Test.Commands
             gitRepository.Expect(x => x.ReadAllTfsRemotes()).Return(new List<IGitTfsRemote> { remote }).Repeat.Once();
             gitRepository.Expect(x => x.AssertValidBranchName(GIT_BRANCH_TO_INIT)).Return(GIT_BRANCH_TO_INIT).Repeat.Never();
 
-            Assert.Throws(typeof(GitTfsException), ()=>mocks.ClassUnderTest.Run("$/MyProject/MyBranch"));
+            Assert.Throws(typeof(GitTfsException), () => mocks.ClassUnderTest.Run("$/MyProject/MyBranch"));
 
             gitRepository.VerifyAllExpectations();
         }
@@ -239,7 +236,7 @@ namespace Sep.Git.Tfs.Test.Commands
             remote.Tfs.Stub(t => t.GetRootChangesetForBranch(tfsPathBranch1)).Return(new List<RootBranch>() { new RootBranch(rootChangeSetB1, tfsPathBranch1) });
 
             newBranch1Remote.Expect(r => r.RemoteRef).Return("refs/remote/tfs/" + GIT_BRANCH_TO_INIT1).Repeat.Once();
-            newBranch1Remote.Expect(r => r.Fetch(Arg<bool>.Is.Anything,Arg<int>.Is.Anything, Arg<IRenameResult>.Is.Anything)).Return(new GitTfsRemote.FetchResult(){IsSuccess = true}).Repeat.Once();
+            newBranch1Remote.Expect(r => r.Fetch(Arg<bool>.Is.Anything, Arg<int>.Is.Anything, Arg<IRenameResult>.Is.Anything)).Return(new GitTfsRemote.FetchResult() { IsSuccess = true }).Repeat.Once();
             newBranch1Remote.MaxCommitHash = "ShaAfterFetch_Branch1";
             #endregion
 
@@ -309,7 +306,7 @@ namespace Sep.Git.Tfs.Test.Commands
             newBranch2Remote.Expect(r => r.Fetch(Arg<bool>.Is.Anything, Arg<int>.Is.Anything, Arg<IRenameResult>.Is.Anything)).Return(new GitTfsRemote.FetchResult() { IsSuccess = true }).Repeat.Once();
             newBranch2Remote.MaxCommitHash = "ShaAfterFetch_Branch2";
             #endregion
-            
+
             gitRepository.Expect(x => x.AssertValidBranchName(GIT_BRANCH_TO_INIT3)).Return(GIT_BRANCH_TO_INIT3).Repeat.Never();
 
             remote.Expect(r => r.Fetch(Arg<bool>.Is.Anything, Arg<int>.Is.Anything, Arg<IRenameResult>.Is.Anything)).Return(new GitTfsRemote.FetchResult() { IsSuccess = true }).Repeat.Once();
@@ -394,7 +391,7 @@ namespace Sep.Git.Tfs.Test.Commands
             remote.TfsPassword = "pwd";
             remote.TfsRepositoryPath = "$/MyProject/Trunk";
             remote.TfsUrl = "http://myTfsServer:8080/tfs";
-            remote.Tfs = new VsFake.TfsHelper(mocks.Container, null, null);
+            remote.Tfs = new TfsHelper(mocks.Container, null);
             gitRepository.Expect(x => x.ReadTfsRemote("default")).Return(remote).Repeat.Never();
 
             //Not Very Clean!!! Don't know how to test that :(

@@ -3,26 +3,23 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using StructureMap;
 using Sep.Git.Tfs.Commands;
 using Sep.Git.Tfs.Core;
-using Sep.Git.Tfs.Core.TfsInterop;
 using Sep.Git.Tfs.Util;
+using NLog;
 
 namespace Sep.Git.Tfs
 {
     public class GitTfs
     {
-        private IGitTfsVersionProvider _gitTfsVersionProvider;
-        private ITfsHelper tfsHelper;
-        private GitTfsCommandFactory commandFactory;
+        private readonly IGitTfsVersionProvider _gitTfsVersionProvider;
+        private readonly GitTfsCommandFactory _commandFactory;
         private readonly IHelpHelper _help;
         private readonly IContainer _container;
         private readonly GitTfsCommandRunner _runner;
         private readonly Globals _globals;
-        private TextWriter _stdout;
-        private Bootstrapper _bootstrapper;
+        private readonly Bootstrapper _bootstrapper;
 
         public static void SendNotification(string message)
         {
@@ -44,17 +41,15 @@ namespace Sep.Git.Tfs
             Trace.WriteLine(string.Format("Notification Sent\r\n{0}", output));
         }
 
-        public GitTfs(ITfsHelper tfsHelper, GitTfsCommandFactory commandFactory, IHelpHelper help, IContainer container,
-            IGitTfsVersionProvider gitTfsVersionProvider, GitTfsCommandRunner runner, Globals globals, TextWriter stdout, Bootstrapper bootstrapper)
+        public GitTfs(GitTfsCommandFactory commandFactory, IHelpHelper help, IContainer container,
+            IGitTfsVersionProvider gitTfsVersionProvider, GitTfsCommandRunner runner, Globals globals, Bootstrapper bootstrapper)
         {
-            this.tfsHelper = tfsHelper;
-            this.commandFactory = commandFactory;
+            _commandFactory = commandFactory;
             _help = help;
             _container = container;
             _gitTfsVersionProvider = gitTfsVersionProvider;
             _runner = runner;
             _globals = globals;
-            _stdout = stdout;
             _bootstrapper = bootstrapper;
         }
 
@@ -63,24 +58,36 @@ namespace Sep.Git.Tfs
             InitializeGlobals();
             _globals.CommandLineRun = "git tfs " + string.Join(" ", args);
             var command = ExtractCommand(args);
-            if(RequiresValidGitRepository(command)) AssertValidGitRepository();
             var unparsedArgs = ParseOptions(command, args);
+            UpdateLoggerOnDebugging();
             Trace.WriteLine("Command run:" + _globals.CommandLineRun);
+            if (RequiresValidGitRepository(command)) AssertValidGitRepository();
             ParseAuthors();
             return Main(command, unparsedArgs);
+        }
+
+        private void UpdateLoggerOnDebugging()
+        {
+            if (_globals.DebugOutput)
+            {
+                var consoleRule = LogManager.Configuration.LoggingRules.First();
+                consoleRule.EnableLoggingForLevel(LogLevel.Debug);
+                //consoleRule.DisableLoggingForLevel(LogLevel.Trace);
+                LogManager.ReconfigExistingLoggers();
+            }
         }
 
         public int Main(GitTfsCommand command, IList<string> unparsedArgs)
         {
             Trace.WriteLine(_gitTfsVersionProvider.GetVersionString());
-            if(_globals.ShowHelp)
+            if (_globals.ShowHelp)
             {
                 return _help.ShowHelp(command);
             }
-            else if(_globals.ShowVersion)
+            else if (_globals.ShowVersion)
             {
-                _container.GetInstance<TextWriter>().WriteLine(_gitTfsVersionProvider.GetVersionString());
-                _container.GetInstance<TextWriter>().WriteLine(GitTfsConstants.MessageForceVersion);
+                Trace.TraceInformation(_gitTfsVersionProvider.GetVersionString());
+                Trace.TraceInformation(GitTfsConstants.MessageForceVersion);
                 return GitTfsExitCodes.OK;
             }
             else
@@ -98,7 +105,7 @@ namespace Sep.Git.Tfs
 
         public bool RequiresValidGitRepository(GitTfsCommand command)
         {
-            return ! command.GetType().GetCustomAttributes(typeof (RequiresValidGitRepositoryAttribute), false).IsEmpty();
+            return !command.GetType().GetCustomAttributes(typeof(RequiresValidGitRepositoryAttribute), false).IsEmpty();
         }
 
         private void ParseAuthors()
@@ -109,11 +116,11 @@ namespace Sep.Git.Tfs
             }
             catch (Exception ex)
             {
-                Trace.WriteLine(ex);
+                Trace.WriteLine("Error when parsing author file:" + ex);
                 if (!string.IsNullOrEmpty(_globals.AuthorsFilePath))
                     throw;
-                _stdout.WriteLine("warning: author file ignored due to a problem occuring when reading it :\n\t" + ex.Message);
-                _stdout.WriteLine("         Verify the file :" + Path.Combine(_globals.GitDir, AuthorsFile.GitTfsCachedAuthorsFileName));
+                Trace.TraceWarning("warning: author file ignored due to a problem occuring when reading it :\n\t" + ex.Message);
+                Trace.TraceWarning("         Verify the file :" + Path.Combine(_globals.GitDir, AuthorsFile.GitTfsCachedAuthorsFileName));
             }
         }
 
@@ -128,7 +135,7 @@ namespace Sep.Git.Tfs
             {
                 _globals.StartingRepositorySubDir = "";
             }
-            if(_globals.GitDir != null)
+            if (_globals.GitDir != null)
             {
                 _globals.GitDirSetByUser = true;
             }
@@ -136,7 +143,6 @@ namespace Sep.Git.Tfs
             {
                 _globals.GitDir = ".git";
             }
-            _globals.Stdout = _stdout;
             _globals.Bootstrapper = _bootstrapper;
         }
 
@@ -156,11 +162,11 @@ namespace Sep.Git.Tfs
                                          () =>
                                              {
                                                  cdUp = git.CommandOneline("rev-parse", "--show-cdup");
-                                                 if (String.IsNullOrEmpty(cdUp))
+                                                 if (string.IsNullOrEmpty(cdUp))
                                                      gitDir = ".";
                                                  else
                                                      cdUp = cdUp.TrimEnd();
-                                                 if (String.IsNullOrEmpty(cdUp))
+                                                 if (string.IsNullOrEmpty(cdUp))
                                                      cdUp = ".";
                                              });
                 Environment.CurrentDirectory = cdUp;
@@ -177,7 +183,7 @@ namespace Sep.Git.Tfs
         {
             for (int i = 0; i < args.Count; i++)
             {
-                var command = commandFactory.GetCommand(args[i]);
+                var command = _commandFactory.GetCommand(args[i]);
                 if (command != null)
                 {
                     args.RemoveAt(i);

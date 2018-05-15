@@ -5,7 +5,6 @@ using Sep.Git.Tfs.Commands;
 
 namespace Sep.Git.Tfs.Core
 {
-
     public interface IFetchResult : IRenameResult
     {
         bool IsSuccess { get; set; }
@@ -48,6 +47,8 @@ namespace Sep.Git.Tfs.Core
         string Prefix { get; }
         bool ExportMetadatas { get; set; }
         Dictionary<string, string> ExportWorkitemsMapping { get; set; }
+        int? GetInitialChangeset();
+        void SetInitialChangeset(int? changesetId);
         bool ShouldSkip(string path);
         IGitTfsRemote InitBranch(RemoteOptions remoteOptions, string tfsRepositoryPath, int rootChangesetId = -1, bool fetchParentBranch = false, string gitBranchNameExpected = null, IRenameResult renameResult = null);
         string GetPathInGitRepo(string tfsPath);
@@ -71,6 +72,7 @@ namespace Sep.Git.Tfs.Core
         void UpdateTfsHead(string commitHash, int changesetId);
         void EnsureTfsAuthenticated();
         bool MatchesUrlAndRepositoryPath(string tfsUrl, string tfsRepositoryPath);
+        void DeleteShelveset(string shelvesetName);
     }
 
     public static class IGitTfsRemoteExt

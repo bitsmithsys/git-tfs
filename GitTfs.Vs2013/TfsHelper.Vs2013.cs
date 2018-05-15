@@ -1,4 +1,3 @@
-using System.IO;
 using Sep.Git.Tfs.VsCommon;
 using StructureMap;
 
@@ -8,7 +7,8 @@ namespace Sep.Git.Tfs.Vs2013
     {
         protected override string TfsVersionString { get { return "12.0"; } }
 
-        public TfsHelper(TextWriter stdout, TfsApiBridge bridge, IContainer container)
-            : base(stdout, bridge, container) { }
+        public TfsHelper(TfsApiBridge bridge, IContainer container)
+            : base(bridge, container)
+        { }
     }
 }

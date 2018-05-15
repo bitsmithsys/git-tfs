@@ -1,33 +1,28 @@
 using System;
-using System.Collections.Generic;
 using Xunit;
-using Xunit.Sdk;
 
 namespace Sep.Git.Tfs.Test
 {
     public class FactExceptOnUnixAttribute : FactAttribute
     {
-        protected override IEnumerable<ITestCommand> EnumerateTestCommands(IMethodInfo method)
+        public override string Skip
         {
-            yield return new FactExceptOnUnixTestCommand(method);
+            get
+            {
+                if (IsUnix())
+                    return "Skipped because run on Unix";
+                return base.Skip;
+            }
+
+            set
+            {
+                base.Skip = value;
+            }
         }
 
-        class FactExceptOnUnixTestCommand : FactCommand
+        private bool IsUnix()
         {
-            public FactExceptOnUnixTestCommand(IMethodInfo method) : base(method) { }
-
-            public override MethodResult Execute(object testClass)
-            {
-                if(IsUnix())
-                    return new SkipResult(testMethod, DisplayName, "This test does not work on unix-like OSes yet.");
-
-                return base.Execute(testClass);
-            }
-
-            private bool IsUnix()
-            {
-                return Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX;
-            }
+            return Environment.OSVersion.Platform == PlatformID.Unix || Environment.OSVersion.Platform == PlatformID.MacOSX;
         }
     }
 }

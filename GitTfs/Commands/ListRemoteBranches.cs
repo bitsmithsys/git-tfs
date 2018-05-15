@@ -1,10 +1,10 @@
 using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using NDesk.Options;
 using StructureMap;
 using Sep.Git.Tfs.Core;
 using Sep.Git.Tfs.Core.TfsInterop;
+using System.Diagnostics;
 
 namespace Sep.Git.Tfs.Commands
 {
@@ -12,56 +12,54 @@ namespace Sep.Git.Tfs.Commands
     [Description("list-remote-branches tfs-url-or-instance-name \n       git tfs list-remote-branches http://myTfsServer:8080/tfs/TfsRepository\n")]
     public class ListRemoteBranches : GitTfsCommand
     {
-        private readonly Globals globals;
-        private readonly ITfsHelper tfsHelper;
-        private readonly RemoteOptions remoteOptions;
-        private TextWriter stdout;
+        private readonly ITfsHelper _tfsHelper;
+        private readonly RemoteOptions _remoteOptions;
 
-        public ListRemoteBranches(Globals globals, TextWriter stdout, ITfsHelper tfsHelper, RemoteOptions remoteOptions)
+        public ListRemoteBranches(ITfsHelper tfsHelper, RemoteOptions remoteOptions)
         {
-            this.globals = globals;
-            this.stdout = stdout;
-            this.tfsHelper = tfsHelper;
-            this.remoteOptions = remoteOptions;
+            _tfsHelper = tfsHelper;
+            _remoteOptions = remoteOptions;
         }
 
         public OptionSet OptionSet
         {
             get
             {
-                return remoteOptions.OptionSet;
+                return _remoteOptions.OptionSet;
             }
         }
 
         public int Run(string tfsUrl)
         {
-            tfsHelper.Url = tfsUrl;
-            tfsHelper.Username = remoteOptions.Username;
-            tfsHelper.Password = remoteOptions.Password;
-            tfsHelper.EnsureAuthenticated();
+            _tfsHelper.Url = tfsUrl;
+            _tfsHelper.Username = _remoteOptions.Username;
+            _tfsHelper.Password = _remoteOptions.Password;
+            _tfsHelper.EnsureAuthenticated();
 
-            if (!tfsHelper.CanGetBranchInformation)
+            if (!_tfsHelper.CanGetBranchInformation)
             {
                 throw new GitTfsException("error: this version of TFS doesn't support this functionality");
             }
 
-            var branches = tfsHelper.GetBranches().Where(b => b.IsRoot).ToList();
+            string convertBranchMessage = "  -> Open 'Source Control Explorer' and for each folder corresponding to a branch, right click on the folder and select 'Branching and Merging' > 'Convert to branch'.";
+            var branches = _tfsHelper.GetBranches().Where(b => b.IsRoot).ToList();
             if (branches.IsEmpty())
             {
-                stdout.WriteLine("No TFS branches were found!");
-                stdout.WriteLine("\n\nPerhaps you should convert your branch folders into a branch in TFS:");
+                Trace.TraceWarning("No TFS branches were found!");
+                Trace.TraceWarning("\n\nPerhaps you should convert your branch folders into a branch in TFS:");
+                Trace.TraceWarning(convertBranchMessage);
             }
             else
             {
-                stdout.WriteLine("TFS branches that could be cloned:");
+                Trace.TraceInformation("TFS branches that could be cloned:");
                 foreach (var branchObject in branches.Where(b => b.IsRoot))
                 {
-                    Branch.WriteRemoteTfsBranchStructure(tfsHelper, stdout, branchObject.Path);
+                    Branch.WriteRemoteTfsBranchStructure(_tfsHelper, branchObject.Path);
                 }
-                stdout.WriteLine("\nCloning root branches (marked by [*]) is recommended!");
-                stdout.WriteLine("\n\nPS:if your branch is not listed here, perhaps you should convert its containing folder into a branch in TFS:");
+                Trace.TraceInformation("\nCloning root branches (marked by [*]) is recommended!");
+                Trace.TraceInformation("\n\nPS:if your branch is not listed here, perhaps you should convert its containing folder into a branch in TFS:");
+                Trace.TraceInformation(convertBranchMessage);
             }
-            stdout.WriteLine("  -> Open 'Source Control Explorer' and for each folder corresponding to a branch, right click on the folder and select 'Branching and Merging' > 'Convert to branch'.");
             return GitTfsExitCodes.OK;
         }
     }

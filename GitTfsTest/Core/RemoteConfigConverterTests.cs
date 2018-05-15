@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Xunit;
 using Sep.Git.Tfs.Core;
@@ -8,11 +7,11 @@ using Sep.Git.Tfs.Commands;
 
 namespace Sep.Git.Tfs.Test.Core
 {
-    public class RemoteConfigConverterTests
+    public class RemoteConfigConverterTests : BaseTest
     {
-        public class DumpTests
+        public class DumpTests : BaseTest
         {
-            RemoteConfigConverter _dumper = new RemoteConfigConverter();
+            private readonly RemoteConfigConverter _dumper = new RemoteConfigConverter();
 
             [Fact]
             public void DumpsNothingWithNoId()
@@ -116,7 +115,7 @@ namespace Sep.Git.Tfs.Test.Core
                     IgnoreRegex = "abc",
                     IgnoreExceptRegex = "def",
                     Autotag = true,
-                    Aliases = new [] { "http://abc", "http://def" },
+                    Aliases = new[] { "http://abc", "http://def" },
                 };
                 var remoteOptions = remote.RemoteOptions;
 
@@ -132,9 +131,9 @@ namespace Sep.Git.Tfs.Test.Core
             }
         }
 
-        public class LoadTests
+        public class LoadTests : BaseTest
         {
-            RemoteConfigConverter _loader = new RemoteConfigConverter();
+            private readonly RemoteConfigConverter _loader = new RemoteConfigConverter();
 
             private IEnumerable<RemoteInfo> Load(params ConfigurationEntry<string>[] configs)
             {
@@ -206,10 +205,9 @@ namespace Sep.Git.Tfs.Test.Core
                     c("tfs-remote.default.repository", "$/project"));
                 Assert.Equal(0, remotes.Count());
             }
-
         }
 
-        RemoteConfigConverter _converter = new RemoteConfigConverter();
+        private readonly RemoteConfigConverter _converter = new RemoteConfigConverter();
 
         [Fact]
         public void MultipleRemotes()
@@ -248,10 +246,10 @@ namespace Sep.Git.Tfs.Test.Core
             return new TestConfigurationEntry(key, value);
         }
 
-        class TestConfigurationEntry : ConfigurationEntry<string>
+        private class TestConfigurationEntry : ConfigurationEntry<string>
         {
-            string _key;
-            string _value;
+            private readonly string _key;
+            private readonly string _value;
 
             public override string Key { get { return _key; } }
             public override string Value { get { return _value; } }

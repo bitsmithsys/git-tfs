@@ -1,5 +1,4 @@
-﻿using System.IO;
-using Rhino.Mocks;
+﻿using Rhino.Mocks;
 using Rhino.Mocks.Constraints;
 using Sep.Git.Tfs.Commands;
 using Sep.Git.Tfs.Core;
@@ -8,14 +7,13 @@ using Xunit;
 
 namespace Sep.Git.Tfs.Test.Commands
 {
-    public class ShelveTest
+    public class ShelveTest : BaseTest
     {
-        private RhinoAutoMocker<Shelve> mocks;
+        private readonly RhinoAutoMocker<Shelve> mocks;
 
         public ShelveTest()
         {
             mocks = new RhinoAutoMocker<Shelve>();
-            mocks.Inject<TextWriter>(new StringWriter());
             mocks.Get<Globals>().Repository = mocks.Get<IGitRepository>();
         }
 
@@ -75,7 +73,7 @@ namespace Sep.Git.Tfs.Test.Commands
             subtree.Remote.Stub(x => x.IsSubtree).Return(true);
             subtree.Remote.Stub(x => x.OwningRemoteId).Return("good-choice");
             mocks.Get<IGitRepository>().Stub(x => x.GetLastParentTfsCommits("my-head"))
-                .Return(new[] { ChangesetForRemote("good-choice"),  subtree});
+                .Return(new[] { ChangesetForRemote("good-choice"), subtree });
 
             Assert.Equal(GitTfsExitCodes.OK, mocks.ClassUnderTest.Run("don't care", "my-head"));
         }
@@ -131,7 +129,7 @@ namespace Sep.Git.Tfs.Test.Commands
             remote.Stub(r => r.Id).Return("default");
             //mocks.Get<IGitRepository>().Stub(x => x.ReadTfsRemote(null)).IgnoreArguments().Return(remote);
             mocks.Get<IGitRepository>().Stub(x => x.GetLastParentTfsCommits(null)).IgnoreArguments()
-                .Return(new[] {new TfsChangesetInfo {Remote = remote}});
+                .Return(new[] { new TfsChangesetInfo { Remote = remote } });
 
             mocks.ClassUnderTest.Run("shelveset name", "treeish");
 
@@ -178,7 +176,7 @@ namespace Sep.Git.Tfs.Test.Commands
         {
             var mockRemote = mocks.AddAdditionalMockFor<IGitTfsRemote>();
             mockRemote.Stub(x => x.Id).Return(remoteId);
-            return new TfsChangesetInfo() {Remote = mockRemote};
+            return new TfsChangesetInfo() { Remote = mockRemote };
         }
 
         private void WireUpMockRemote()

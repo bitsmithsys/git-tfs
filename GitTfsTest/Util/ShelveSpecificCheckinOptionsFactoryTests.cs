@@ -1,5 +1,4 @@
-﻿using System.IO;
-using Sep.Git.Tfs.Commands;
+﻿using Sep.Git.Tfs.Commands;
 using Sep.Git.Tfs.Core;
 using Sep.Git.Tfs.Util;
 using StructureMap.AutoMocking;
@@ -9,7 +8,7 @@ namespace Sep.Git.Tfs.Test.Util
 {
     public class ShelveSpecificCheckinOptionsFactoryTests
     {
-        private RhinoAutoMocker<CheckinOptionsFactory> mocks;
+        private readonly RhinoAutoMocker<CheckinOptionsFactory> mocks;
 
         public ShelveSpecificCheckinOptionsFactoryTests()
         {
@@ -41,7 +40,7 @@ namespace Sep.Git.Tfs.Test.Util
 
         private CheckinOptionsFactory GetCheckinOptionsFactory()
         {
-            return new CheckinOptionsFactory(new StringWriter(), mocks.Get<Globals>());
+            return new CheckinOptionsFactory(mocks.Get<Globals>());
         }
     }
 }

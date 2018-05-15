@@ -1,17 +1,15 @@
 ﻿using System;
-using System.IO;
 using System.Linq;
 using Sep.Git.Tfs.Core;
 using Sep.Git.Tfs.Core.TfsInterop;
 using StructureMap;
 using Xunit;
-using LibGit2Sharp;
 
 namespace Sep.Git.Tfs.Test.Integration
 {
-    public class GitRepositoryTests : IDisposable
+    public class GitRepositoryTests : BaseTest, IDisposable
     {
-        IntegrationHelper h = new IntegrationHelper();
+        private readonly IntegrationHelper h = new IntegrationHelper();
 
         public GitRepositoryTests()
         {
@@ -44,7 +42,7 @@ namespace Sep.Git.Tfs.Test.Integration
 
             using (var repo = h.Repository("repo"))
             {
-                var gitRepository = new GitRepository(new StringWriter(), repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
+                var gitRepository = new GitRepository(repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
                 var changesets = gitRepository.GetLastParentTfsCommits("HEAD");
                 Assert.Equal(1, changesets.Count());
                 Assert.Equal(c3, changesets.First().GitCommit);
@@ -66,7 +64,7 @@ namespace Sep.Git.Tfs.Test.Integration
             string c3 = null;
             h.SetupGitRepo("repo", g =>
             {
-                c1 = g.Commit("A sample commit from TFS.\n\ngit-tfs-id: [http://server/tfs]$/MyProject/trunk;C"+ ChangesetIdToTrickFetch);
+                c1 = g.Commit("A sample commit from TFS.\n\ngit-tfs-id: [http://server/tfs]$/MyProject/trunk;C" + ChangesetIdToTrickFetch);
                 g.CreateBranch("branch");
                 c2 = g.Commit("A sample commit from TFS.\n\ngit-tfs-id: [http://server/tfs]$/MyProject/branch;C" + ChangesetIdToTrickFetch);
                 g.Checkout("master");
@@ -76,7 +74,7 @@ namespace Sep.Git.Tfs.Test.Integration
 
             using (var repo = h.Repository("repo"))
             {
-                var gitRepository = new GitRepository(new StringWriter(), repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
+                var gitRepository = new GitRepository(repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
                 var changesets = gitRepository.GetLastParentTfsCommits("HEAD");
                 Assert.Equal(2, changesets.Count());
                 //C3 must be returned first because that's the parent commit of the master branch where the other branch is merged
@@ -113,7 +111,7 @@ namespace Sep.Git.Tfs.Test.Integration
 
             using (var repo = h.Repository("repo"))
             {
-                var gitRepository = new GitRepository(new StringWriter(), repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
+                var gitRepository = new GitRepository(repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
                 var changesets = gitRepository.GetLastParentTfsCommits("HEAD");
                 Assert.Equal(1, changesets.Count());
                 Assert.Equal(c4, changesets.First().GitCommit);
@@ -138,7 +136,7 @@ namespace Sep.Git.Tfs.Test.Integration
 
             using (var repo = h.Repository("repo"))
             {
-                var gitRepository = new GitRepository(new StringWriter(), repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
+                var gitRepository = new GitRepository(repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
                 var changesets = gitRepository.GetLastParentTfsCommits("HEAD");
                 Assert.Equal(0, changesets.Count());
             }
@@ -166,13 +164,13 @@ namespace Sep.Git.Tfs.Test.Integration
             string c6 = null;
             h.SetupGitRepo("repo", g =>
             {
-                c1 = g.Commit("C1-Common");
-                c2 = g.Commit("C2-Common");
+                c1 = g.Commit("C1-Common", "one_file.txt");
+                c2 = g.Commit("C2-Common", "one_file.txt");
                 g.CreateBranch("branch");
-                c4 = g.Commit("C4-branch");
-                c5 = g.Commit("C5-branch");
+                c4 = g.Commit("C4-branch", "another_file.txt");
+                c5 = g.Commit("C5-branch", "another_file.txt");
                 g.Checkout("master");
-                c3 = g.Commit("C3-master");
+                c3 = g.Commit("C3-master", "one_file.txt");
                 g.Merge("branch");
                 //Trick to create a merge commit similar to one fetched from TFS
                 c6 = g.Amend("C6-master (merge branch into)");
@@ -181,7 +179,7 @@ namespace Sep.Git.Tfs.Test.Integration
 
             using (var repo = h.Repository("repo"))
             {
-                var gitRepository = new GitRepository(new StringWriter(), repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
+                var gitRepository = new GitRepository(repo.Info.WorkingDirectory, new Container(), null, new RemoteConfigConverter());
                 //string revList = gitRepository.CommandOneline("rev-list", "--parents", "--ancestry-path", "--first-parent", "--reverse", c1 + ".." + c4);
 
                 var changesets = gitRepository.FindParentCommits(c5, c1);
